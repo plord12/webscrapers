@@ -1,0 +1,20 @@
+name: "Screenshot tool"
+description: "Create screenshots from home assistant"
+version: "1.0.0"
+slug: "ha_ss_addon"
+init: false
+arch:
+  - aarch64
+map:
+  - type: homeassistant_config
+    read_only: False
+schema:
+  username: str
+  password: password
+environment:
+  HOME: /homeassistant/screenshots
+
+# FIX THIS - how to expose only to internal ?
+ports:
+  3500/tcp: 3500
+
