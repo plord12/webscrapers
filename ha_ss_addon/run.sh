@@ -3,8 +3,6 @@
 export HA_USERNAME=$(bashio::config 'username')
 export HA_PASSWORD=$(bashio::config 'password')
 
-set -x
-
 mkdir -p ${HOME}
 cd ${HOME}
 

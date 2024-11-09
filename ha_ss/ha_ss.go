@@ -48,12 +48,12 @@ func main() {
 	defaultPassword := ""
 	defaultUrl := ""
 	defaultCss := ""
-	defaultFilename := "output.png"
+	defaultPath := "output.png"
 
 	if envHeadless := os.Getenv("HEADLESS"); envHeadless != "" {
 		defaultHeadless, _ = strconv.ParseBool(envHeadless)
 	}
-	if envRestPort := os.Getenv("RESTPORT"); envRestPort != "" {
+	if envRestPort := os.Getenv("HA_RESTPORT"); envRestPort != "" {
 		defaultRestPort, _ = strconv.Atoi(envRestPort)
 	}
 	if envUsername := os.Getenv("HA_USERNAME"); envUsername != "" {
@@ -68,8 +68,8 @@ func main() {
 	if envCss := os.Getenv("HA_CSS"); envCss != "" {
 		defaultCss = envCss
 	}
-	if envFilenames := os.Getenv("HA_FILENAME"); envFilenames != "" {
-		defaultFilename = envFilenames
+	if envPath := os.Getenv("HA_PATH"); envPath != "" {
+		defaultPath = envPath
 	}
 
 	// arguments
@@ -78,10 +78,28 @@ func main() {
 	username = flag.String("username", defaultUsername, "Home assistant username")
 	password = flag.String("password", defaultPassword, "Home assistant password")
 
-	restport := flag.Int("restport", defaultRestPort, "REST port")
+	restport := flag.Int("restport", defaultRestPort, "If set, startup REST server at given port")
 	url := flag.String("url", defaultUrl, "Home assistant page URL")
-	css := flag.String("css", defaultCss, "Home assistant chart CSS selector")
-	filename := flag.String("filename", defaultFilename, "Output filename")
+	css := flag.String("css", defaultCss, "Home assistant CSS selector")
+	path := flag.String("path", defaultPath, "Output screenshot path")
+
+	// usage
+	//
+	flag.Usage = func() {
+		fmt.Println("Connect to Home Assistant and take a screenshot by CSS selector")
+		fmt.Println("\nUsage:")
+		fmt.Printf("  %s [options]\n", os.Args[0])
+		fmt.Println("\nOptions:")
+		flag.PrintDefaults()
+		fmt.Println("\nEnvironment variables:")
+		fmt.Println("  $HEADLESS - Headless mode")
+		fmt.Println("  $HA_CSS - Home assistant CSS selector")
+		fmt.Println("  $HA_PATH - Output screenshot path")
+		fmt.Println("  $HA_USERNAME - Home assistant username")
+		fmt.Println("  $HA_PASSWORD - Home assistant password")
+		fmt.Println("  $HA_RESTPORT - If set, startup REST server at given port")
+		fmt.Println("  $HA_URL - Home assistant page URL")
+	}
 
 	// parse flags
 	//
@@ -98,7 +116,7 @@ func main() {
 	} else {
 		// one-off run
 		//
-		err := screenshot(*headless, *username, *password, *url, *css, *filename)
+		err := screenshot(*headless, *username, *password, *url, *css, *path)
 		if err != nil {
 			log.Fatal(err.Error())
 		}
