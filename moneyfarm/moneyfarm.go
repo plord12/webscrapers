@@ -1,6 +1,6 @@
 /**
 
-Get aviva balance
+Get moneyfarm balance
 
 */
 
@@ -29,17 +29,17 @@ func main() {
 	defaultHeadless := true
 	defaultUsername := ""
 	defaultPassword := ""
-	defaultOtpPath := "otp/aviva"
+	defaultOtpPath := "otp/moneyfarm"
 	defaultOtpCleanCommand := ""
 	defaultOtpCommand := ""
 
 	if envHeadless := os.Getenv("HEADLESS"); envHeadless != "" {
 		defaultHeadless, _ = strconv.ParseBool(envHeadless)
 	}
-	if envUsername := os.Getenv("AVIVA_USERNAME"); envUsername != "" {
+	if envUsername := os.Getenv("MONEYFARM_USERNAME"); envUsername != "" {
 		defaultUsername = envUsername
 	}
-	if envPassword := os.Getenv("AVIVA_PASSWORD"); envPassword != "" {
+	if envPassword := os.Getenv("MONEYFARM_PASSWORD"); envPassword != "" {
 		defaultPassword = envPassword
 	}
 	if envOtpPath := os.Getenv("OTP_PATH"); envOtpPath != "" {
@@ -55,27 +55,28 @@ func main() {
 	// arguments
 	//
 	headless := flag.Bool("headless", defaultHeadless, "Headless mode")
-	otpCleanCommand := flag.String("otpcleancommand", defaultOtpCleanCommand, "Command to clean previous one time password")
 	otpCommand := flag.String("otpcommand", defaultOtpCommand, "Command to get one time password")
+	otpCleanCommand := flag.String("otpcleancommand", defaultOtpCleanCommand, "Command to clean previous one time password")
 	otpPath := flag.String("otppath", defaultOtpPath, "Path to file containing one time password message")
 
-	username := flag.String("username", defaultUsername, "Aviva username")
-	password := flag.String("password", defaultPassword, "Aviva password")
+	username := flag.String("username", defaultUsername, "Moneyfarm username")
+	password := flag.String("password", defaultPassword, "Moneyfarm password")
 
 	// usage
 	//
 	flag.Usage = func() {
-		fmt.Println("Retrive Aviva balance via web scraping")
+		fmt.Println("Retrive Moneyfarm balance via web scraping")
 		fmt.Println("\nUsage:")
 		fmt.Printf("  %s [options]\n", os.Args[0])
 		fmt.Println("\nOptions:")
 		flag.PrintDefaults()
 		fmt.Println("\nEnvironment variables:")
 		fmt.Println("  $HEADLESS - Headless mode")
+		fmt.Println("  $OTP_CLEANCOMMAND - Command to clean previous one time password")
 		fmt.Println("  $OTP_COMMAND - Command to get one time password")
 		fmt.Println("  $OTP_PATH - Path to file containing one time password message")
-		fmt.Println("  $AVIVA_USERNAME - Aviva username")
-		fmt.Println("  $AVIVA_PASSWORD - Aviva password")
+		fmt.Println("  $MONEYFARM_USERNAME - Moneyfarm username")
+		fmt.Println("  $MONEYFARM_PASSWORD - Moneyfarm password")
 	}
 
 	// parse flags
@@ -124,35 +125,34 @@ func main() {
 	// main page & login
 	//
 	log.Printf("Starting chromium\n")
-	_, err = page.Goto("https://www.direct.aviva.co.uk/MyAccount/login", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
+	_, err = page.Goto("https://app.moneyfarm.com/gb/sign-in", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 	if err != nil {
 		browser.Close()
 		pw.Stop()
 		log.Fatalf("could not goto url: %v", err)
 	}
 
-	// dismiss pop-up
+	// accept cookies
 	//
-	// <button id="onetrust-accept-btn-handler">Accept all cookies</button>
-	page.Locator("#onetrust-accept-btn-handler").Click()
+	page.GetByText("OK, I agree", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click()
 
 	log.Printf("Logging in\n")
-	// <input aria-required="True" autocomplete="off" class="a-textbox" data-qa-textbox="username" data-val="true" data-val-required="Please enter your username" id="username" maxlength="50" name="username" type="text" value="">
-	err = page.Locator("#username").Fill(*username)
+	// <input type="email" id="email" name="email" autocomplete="email" class="sc-dWddBi dbJxuP" value="">
+	err = page.Locator("#email").Fill(*username)
 	if err != nil {
 		browser.Close()
 		pw.Stop()
 		log.Fatalf("could not get username: %v", err)
 	}
-	// <input aria-required="True" autocomplete="off" class="a-textbox" data-qa-textbox="password" data-val="true" data-val-required="Please enter your password" id="password" maxlength="300" name="password" type="password">
+	// <input type="password" id="password" name="password" autocomplete="current-password" class="sc-dWddBi dbJxuP" value="">
 	err = page.Locator("#password").Fill(*password)
 	if err != nil {
 		browser.Close()
 		pw.Stop()
 		log.Fatalf("could not get password: %v", err)
 	}
-	// <input id="loginButton" name="loginButton" class="a-button a-button--primary dd-data-link" data-dd-group="myAvivaLogin" data-dd-loc="login" data-dd-link="login" type="submit" value="Log in" data-qa-button="submitForm">
-	err = page.Locator("#loginButton").Click()
+	// <button data-role="primary" type="submit" data-overlay="false" class="sc-hKgJUU jhVfGS"><span>Sign in</span></button>
+	err = page.GetByRole("button", playwright.PageGetByRoleOptions{Name: "Sign in"}).Click()
 	if err != nil {
 		browser.Close()
 		pw.Stop()
@@ -175,7 +175,7 @@ func main() {
 		}
 	}
 
-	// check/poll if otp/aviva exists ... could be via the above command or pushed here elsewhere
+	// check/poll if otp exists ... could be via the above command or pushed here elsewhere
 	//
 	otp := ""
 	for i := 0; i < 30; i++ {
@@ -202,17 +202,21 @@ func main() {
 		}
 	}
 
+	os.Remove(*otpPath)
+
 	if otp != "" {
 		log.Println("otp=" + string(otp))
 
-		err = page.Locator("#factor").Fill(otp)
+		// <input class="input c4ea79246 c954c3815 ce0672f58 c3f27bf21 c1a0fa5af" name="code" id="code" type="text" aria-invalid="true" aria-describedby="error-element-code" value="" required="" autocomplete="off" autocapitalize="none" spellcheck="false" autofocus=""><div class="cd7843ea8 js-required c6c423b62 c6c2d595a" data-dynamic-label-for="code" aria-hidden="true">Enter the 6-digit code*</div></div>
+		err = page.Locator("#code").Fill(otp)
 		if err != nil {
 			browser.Close()
 			pw.Stop()
 			log.Fatalf("could not set otp: %v", err)
 		}
 
-		err = page.Locator("#VerifyMFA").Click()
+		// <button type="submit" name="action" value="default" class="c0a486a03 c3a925026 cc4e2760d cf0fbb154 c3a009796" data-action-button-primary="true">Continue</button>
+		err = page.GetByText("Continue", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click()
 		if err != nil {
 			browser.Close()
 			pw.Stop()
@@ -226,17 +230,8 @@ func main() {
 
 	// get balance
 	//
-
-	// <a data-qa-button="Details" data-dd-link="Details" data-dd-loc="roundel" data-dd-group="myavivaHomePage" href="/MyPortfolio/ViewDetail?id=A3Acnhvs2bv17h0NKjx1t0s0fhGjFYRBO_3hxv9uIG41&amp;productCode=50010" class="button yellow dd-data-link">Details</a>
-	err = page.Locator("[data-qa-button=Details]").Click()
-	if err != nil {
-		browser.Close()
-		pw.Stop()
-		log.Fatalf("failed to click on details: %v", err)
-	}
-
-	// <p class="a-heading a-heading--0 font-yellow u-margin--top-none" data-qa-field="yourPensionValue">£123,456.72</p>
-	balance, err := page.Locator("[data-qa-field=yourPensionValue]").TextContent()
+	// <span aria-hidden="false" class="sc-jcRCNh ieovWt">£92,276.76</span>
+	balance, err := page.Locator("[class=\"sc-jcRCNh ieovWt\"]").First().TextContent()
 	if err != nil {
 		browser.Close()
 		pw.Stop()

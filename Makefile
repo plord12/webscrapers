@@ -8,16 +8,28 @@ AVIVA_NAME=aviva
 AVIVA_SOURCE=aviva/aviva.go
 AVIVAMYMONEY_NAME=avivamymoney
 AVIVAMYMONEY_SOURCE=avivamymoney/avivamymoney.go
+NUTMEG_NAME=nutmeg
+NUTMEG_SOURCE=nutmeg/nutmeg.go
+FUND_NAME=fund
+FUND_SOURCE=fund/fund.go
+MONEYFARM_NAME=moneyfarm
+MONEYFARM_SOURCE=${MONEYFARM_NAME}/${MONEYFARM_NAME}.go
 
 BINDIR=bin
 BINARIES=${BINDIR}/${HA_SS_NAME} ${BINDIR}/${HA_SS_NAME}-darwin-arm64 ${BINDIR}/${HA_SS_NAME}-linux-arm64
 BINARIES+=${BINDIR}/${AVIVA_NAME} ${BINDIR}/${AVIVA_NAME}-darwin-arm64 ${BINDIR}/${AVIVA_NAME}-linux-arm64
 BINARIES+=${BINDIR}/${AVIVAMYMONEY_NAME} ${BINDIR}/${AVIVAMYMONEY_NAME}-darwin-arm64 ${BINDIR}/${AVIVAMYMONEY_NAME}-linux-arm64
+BINARIES+=${BINDIR}/${NUTMEG_NAME} ${BINDIR}/${NUTMEG_NAME}-darwin-arm64 ${BINDIR}/${NUTMEG_NAME}-linux-arm64
+BINARIES+=${BINDIR}/${FUND_NAME} ${BINDIR}/${FUND_NAME}-darwin-arm64 ${BINDIR}/${FUND_NAME}-linux-arm64
+BINARIES+=${BINDIR}/${MONEYFARM_NAME} ${BINDIR}/${MONEYFARM_NAME}-darwin-arm64 ${BINDIR}/${MONEYFARM_NAME}-linux-arm64
 
-all: ${BINDIR} ${BINARIES}
+all: ${BINDIR} ${BINARIES} otp
 
 ${BINDIR}:
 	mkdir -p ${BINDIR}
+
+otp:
+	mkdir -p otp
 
 # home assistant screenshots
 #
@@ -52,7 +64,40 @@ ${BINDIR}/${AVIVAMYMONEY_NAME}-darwin-arm64: ${AVIVAMYMONEY_SOURCE}
 ${BINDIR}/${AVIVAMYMONEY_NAME}-linux-arm64: ${AVIVAMYMONEY_SOURCE}
 	GOARCH=arm64 GOOS=linux go build -o $@ $<
 
-test: testha testaviva
+# nutmeg
+#
+${BINDIR}/${NUTMEG_NAME}: ${NUTMEG_SOURCE}
+	go build -o $@ $<
+
+${BINDIR}/${NUTMEG_NAME}-darwin-arm64: ${NUTMEG_SOURCE}
+	GOARCH=arm64 GOOS=darwin go build -o $@ $<
+
+${BINDIR}/${NUTMEG_NAME}-linux-arm64: ${NUTMEG_SOURCE}
+	GOARCH=arm64 GOOS=linux go build -o $@ $<
+
+# fund
+#
+${BINDIR}/${FUND_NAME}: ${FUND_SOURCE}
+	go build -o $@ $<
+
+${BINDIR}/${FUND_NAME}-darwin-arm64: ${FUND_SOURCE}
+	GOARCH=arm64 GOOS=darwin go build -o $@ $<
+
+${BINDIR}/${FUND_NAME}-linux-arm64: ${FUND_SOURCE}
+	GOARCH=arm64 GOOS=linux go build -o $@ $<
+
+# moneyfarm
+#
+${BINDIR}/${MONEYFARM_NAME}: ${MONEYFARM_SOURCE}
+	go build -o $@ $<
+
+${BINDIR}/${MONEYFARM_NAME}-darwin-arm64: ${MONEYFARM_SOURCE}
+	GOARCH=arm64 GOOS=darwin go build -o $@ $<
+
+${BINDIR}/${MONEYFARM_NAME}-linux-arm64: ${MONEYFARM_SOURCE}
+	GOARCH=arm64 GOOS=linux go build -o $@ $<
+
+test: testha testaviva testavivamymoney testnutmeg testfund testmoneyfarm
 
 testha: ${BINDIR}/${HA_SS_NAME}
 	${BINDIR}/${HA_SS_NAME} -help
@@ -64,17 +109,27 @@ testrest:
 	${BINDIR}/${HA_SS_NAME} -username "$(HA_USERNAME)" -password "$(HA_PASSWORD)" -restport 3500
 
 testaviva: ${BINDIR}/${AVIVA_NAME}
-	rm -rf otp
-	mkdir -p otp
 	${BINDIR}/${AVIVA_NAME} -help
-	${BINDIR}/${AVIVA_NAME} -username "$(AVIVA_USERNAME)" -password "$(AVIVA_PASSWORD)" -otpcommand "$(AVIVA_OTPCOMMAND)"
+	${BINDIR}/${AVIVA_NAME} -username "$(AVIVA_USERNAME)" -password "$(AVIVA_PASSWORD)" -otpcleancommand "$(AVIVA_OTPCLEANCOMMAND)"  -otpcommand "$(AVIVA_OTPCOMMAND)"
 
 testavivamymoney: ${BINDIR}/${AVIVAMYMONEY_NAME}
-	rm -rf otp
-	mkdir -p otp
 	${BINDIR}/${AVIVAMYMONEY_NAME} -help
 	${BINDIR}/${AVIVAMYMONEY_NAME} -username "$(AVIVAMYMONEY_USERNAME)" -password "$(AVIVAMYMONEY_PASSWORD)"  -word "$(AVIVAMYMONEY_WORD)"
 
+testnutmeg: ${BINDIR}/${NUTMEG_NAME}
+	${BINDIR}/${NUTMEG_NAME} -help
+	${BINDIR}/${NUTMEG_NAME} -username "$(TEST1_NUTMEG_USERNAME)" -password "$(TEST1_NUTMEG_PASSWORD)" -otpcleancommand "$(NUTMEG_OTPCLEANCOMMAND)" -otpcommand "$(NUTMEG_OTPCOMMAND)"
+	${BINDIR}/${NUTMEG_NAME} -username "$(TEST2_NUTMEG_USERNAME)" -password "$(TEST2_NUTMEG_PASSWORD)" -otpcleancommand "$(NUTMEG_OTPCLEANCOMMAND)" -otpcommand "$(NUTMEG_OTPCOMMAND)"
+
+testfund: ${BINDIR}/${FUND_NAME}
+	${BINDIR}/${FUND_NAME} -help
+	${BINDIR}/${FUND_NAME} -fund "$(TEST1_FUND)"
+	${BINDIR}/${FUND_NAME} -fund "$(TEST2_FUND)"
+
+testmoneyfarm: ${BINDIR}/${MONEYFARM_NAME}
+	${BINDIR}/${MONEYFARM_NAME} -help
+	${BINDIR}/${MONEYFARM_NAME} -username "$(TEST1_MONEYFARM_USERNAME)" -password "$(TEST1_MONEYFARM_PASSWORD)" -otpcleancommand "$(MONEYFARM_OTPCLEANCOMMAND)" -otpcommand "$(MONEYFARM_OTPCOMMAND)"
+	${BINDIR}/${MONEYFARM_NAME} -username "$(TEST2_MONEYFARM_USERNAME)" -password "$(TEST2_MONEYFARM_PASSWORD)" -otpcleancommand "$(MONEYFARM_OTPCLEANCOMMAND)" -otpcommand "$(MONEYFARM_OTPCOMMAND)"
 
 
 clean:

@@ -1,6 +1,6 @@
 /**
 
-Get aviva balance
+Get nutmeg balance
 
 */
 
@@ -29,17 +29,17 @@ func main() {
 	defaultHeadless := true
 	defaultUsername := ""
 	defaultPassword := ""
-	defaultOtpPath := "otp/aviva"
+	defaultOtpPath := "otp/nutmeg"
 	defaultOtpCleanCommand := ""
 	defaultOtpCommand := ""
 
 	if envHeadless := os.Getenv("HEADLESS"); envHeadless != "" {
 		defaultHeadless, _ = strconv.ParseBool(envHeadless)
 	}
-	if envUsername := os.Getenv("AVIVA_USERNAME"); envUsername != "" {
+	if envUsername := os.Getenv("NUTMEG_USERNAME"); envUsername != "" {
 		defaultUsername = envUsername
 	}
-	if envPassword := os.Getenv("AVIVA_PASSWORD"); envPassword != "" {
+	if envPassword := os.Getenv("NUTMEG_PASSWORD"); envPassword != "" {
 		defaultPassword = envPassword
 	}
 	if envOtpPath := os.Getenv("OTP_PATH"); envOtpPath != "" {
@@ -55,27 +55,28 @@ func main() {
 	// arguments
 	//
 	headless := flag.Bool("headless", defaultHeadless, "Headless mode")
-	otpCleanCommand := flag.String("otpcleancommand", defaultOtpCleanCommand, "Command to clean previous one time password")
 	otpCommand := flag.String("otpcommand", defaultOtpCommand, "Command to get one time password")
+	otpCleanCommand := flag.String("otpcleancommand", defaultOtpCleanCommand, "Command to clean previous one time password")
 	otpPath := flag.String("otppath", defaultOtpPath, "Path to file containing one time password message")
 
-	username := flag.String("username", defaultUsername, "Aviva username")
-	password := flag.String("password", defaultPassword, "Aviva password")
+	username := flag.String("username", defaultUsername, "Nutmeg username")
+	password := flag.String("password", defaultPassword, "Nutmeg password")
 
 	// usage
 	//
 	flag.Usage = func() {
-		fmt.Println("Retrive Aviva balance via web scraping")
+		fmt.Println("Retrive Nutmeg balance via web scraping")
 		fmt.Println("\nUsage:")
 		fmt.Printf("  %s [options]\n", os.Args[0])
 		fmt.Println("\nOptions:")
 		flag.PrintDefaults()
 		fmt.Println("\nEnvironment variables:")
 		fmt.Println("  $HEADLESS - Headless mode")
+		fmt.Println("  $OTP_CLEANCOMMAND - Command to clean previous one time password")
 		fmt.Println("  $OTP_COMMAND - Command to get one time password")
 		fmt.Println("  $OTP_PATH - Path to file containing one time password message")
-		fmt.Println("  $AVIVA_USERNAME - Aviva username")
-		fmt.Println("  $AVIVA_PASSWORD - Aviva password")
+		fmt.Println("  $NUTMEG_USERNAME - Nutmeg username")
+		fmt.Println("  $NUTMEG_PASSWORD - Nutmeg password")
 	}
 
 	// parse flags
@@ -124,35 +125,34 @@ func main() {
 	// main page & login
 	//
 	log.Printf("Starting chromium\n")
-	_, err = page.Goto("https://www.direct.aviva.co.uk/MyAccount/login", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
+	_, err = page.Goto("https://authentication.nutmeg.com/login", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 	if err != nil {
 		browser.Close()
 		pw.Stop()
 		log.Fatalf("could not goto url: %v", err)
 	}
 
-	// dismiss pop-up
+	// accept cookies
 	//
-	// <button id="onetrust-accept-btn-handler">Accept all cookies</button>
-	page.Locator("#onetrust-accept-btn-handler").Click()
+	page.GetByText("Accept all cookies", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click()
 
 	log.Printf("Logging in\n")
-	// <input aria-required="True" autocomplete="off" class="a-textbox" data-qa-textbox="username" data-val="true" data-val-required="Please enter your username" id="username" maxlength="50" name="username" type="text" value="">
+	// <input class="input c4ea79246 c882875d6" inputmode="email" name="username" id="username" type="text" aria-label="Email address" value="" required="" autocomplete="off" autocapitalize="none" spellcheck="false" autofocus="">
 	err = page.Locator("#username").Fill(*username)
 	if err != nil {
 		browser.Close()
 		pw.Stop()
 		log.Fatalf("could not get username: %v", err)
 	}
-	// <input aria-required="True" autocomplete="off" class="a-textbox" data-qa-textbox="password" data-val="true" data-val-required="Please enter your password" id="password" maxlength="300" name="password" type="password">
+	// <input class="input c4ea79246 c2946f7ad" name="password" id="password" type="password" aria-label="Password" required="" autocomplete="current-password" autocapitalize="none" spellcheck="false">
 	err = page.Locator("#password").Fill(*password)
 	if err != nil {
 		browser.Close()
 		pw.Stop()
 		log.Fatalf("could not get password: %v", err)
 	}
-	// <input id="loginButton" name="loginButton" class="a-button a-button--primary dd-data-link" data-dd-group="myAvivaLogin" data-dd-loc="login" data-dd-link="login" type="submit" value="Log in" data-qa-button="submitForm">
-	err = page.Locator("#loginButton").Click()
+	// <button type="submit" name="action" value="default" class="c0a486a03 c3a925026 cc4e2760d cf0fbb154 c4b20090f" data-action-button-primary="true">Sign in</button>
+	err = page.GetByRole("button", playwright.PageGetByRoleOptions{Name: "Sign in"}).Click()
 	if err != nil {
 		browser.Close()
 		pw.Stop()
@@ -202,17 +202,21 @@ func main() {
 		}
 	}
 
+	os.Remove(*otpPath)
+
 	if otp != "" {
 		log.Println("otp=" + string(otp))
 
-		err = page.Locator("#factor").Fill(otp)
+		// <label aria-hidden="true" class="cd7843ea8 c6c423b62 c6c2d595a" for="code">Enter the 6-digit code*</label>
+		err = page.GetByText("Enter the 6-digit code*", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Fill(otp)
 		if err != nil {
 			browser.Close()
 			pw.Stop()
 			log.Fatalf("could not set otp: %v", err)
 		}
 
-		err = page.Locator("#VerifyMFA").Click()
+		// <button type="submit" name="action" value="default" class="c0a486a03 c3a925026 cc4e2760d cf0fbb154 c3a009796" data-action-button-primary="true">Continue</button>
+		err = page.GetByText("Continue", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click()
 		if err != nil {
 			browser.Close()
 			pw.Stop()
@@ -226,17 +230,8 @@ func main() {
 
 	// get balance
 	//
-
-	// <a data-qa-button="Details" data-dd-link="Details" data-dd-loc="roundel" data-dd-group="myavivaHomePage" href="/MyPortfolio/ViewDetail?id=A3Acnhvs2bv17h0NKjx1t0s0fhGjFYRBO_3hxv9uIG41&amp;productCode=50010" class="button yellow dd-data-link">Details</a>
-	err = page.Locator("[data-qa-button=Details]").Click()
-	if err != nil {
-		browser.Close()
-		pw.Stop()
-		log.Fatalf("failed to click on details: %v", err)
-	}
-
-	// <p class="a-heading a-heading--0 font-yellow u-margin--top-none" data-qa-field="yourPensionValue">£123,456.72</p>
-	balance, err := page.Locator("[data-qa-field=yourPensionValue]").TextContent()
+	// <span class="_nk-text_1a26s_12 nk-text _nk-amount_16djj_1 _nk-amount--theme-dark_16djj_49 _nk-amount--positive_16djj_10 _nk-amount--no-line-height_16djj_25 _nk-text--style-text-1_1a26s_60 _nk-text--fw-medium_1a26s_133 _nk-text--color-dark_1a26s_160 _nk-text--theme-dark--color-default_1a26s_356 _nk-text--theme-dark--color-dark_1a26s_362 _nk-text--tag-span_1a26s_103 _nk-text--size-xxl_1a26s_106" aria-label="£417,405" role="text" data-qa="portfolio-summary-overview__portfolio-value"><span class="_nk-text_1a26s_12 nk-text _nk-amount__prefix_16djj_46 _nk-text--no-line-height_1a26s_89 _nk-text--no-color_1a26s_172 _nk-text--style-text-1_1a26s_60 _nk-text--fw-medium_1a26s_133 _nk-text--tag-span_1a26s_103 _nk-text--size-xl_1a26s_109">£</span><span class="_nk-text_1a26s_12 nk-text _nk-text--no-line-height_1a26s_89 _nk-text--no-color_1a26s_172 _nk-text--style-text-1_1a26s_60 _nk-text--fw-medium_1a26s_133 _nk-text--tag-span_1a26s_103 _nk-text--size-xxl_1a26s_106" style="font-family: &quot;ivypresto-headline&quot;, sans-serif;">417,405</span></span>
+	balance, err := page.Locator("[data-qa=portfolio-summary-overview__portfolio-value]").TextContent()
 	if err != nil {
 		browser.Close()
 		pw.Stop()
