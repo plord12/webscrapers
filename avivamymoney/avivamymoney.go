@@ -99,7 +99,7 @@ func main() {
 
 	// main page & login
 	//
-	log.Printf("Starting chromium\n")
+	log.Printf("Starting login\n")
 	_, err = page.Goto("https://www.avivamymoney.co.uk/Login", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 	if err != nil {
 		browser.Close()

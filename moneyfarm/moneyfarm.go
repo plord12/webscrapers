@@ -124,7 +124,7 @@ func main() {
 
 	// main page & login
 	//
-	log.Printf("Starting chromium\n")
+	log.Printf("Starting login\n")
 	_, err = page.Goto("https://app.moneyfarm.com/gb/sign-in", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 	if err != nil {
 		browser.Close()

@@ -14,6 +14,10 @@ FUND_NAME=fund
 FUND_SOURCE=fund/fund.go
 MONEYFARM_NAME=moneyfarm
 MONEYFARM_SOURCE=${MONEYFARM_NAME}/${MONEYFARM_NAME}.go
+MONEYHUB_NAME=moneyhub
+MONEYHUB_SOURCE=${MONEYHUB_NAME}/${MONEYHUB_NAME}.go
+OCTOPUSWHEEL_NAME=octopuswheel
+OCTOPUSWHEEL_SOURCE=${OCTOPUSWHEEL_NAME}/${OCTOPUSWHEEL_NAME}.go
 
 BINDIR=bin
 BINARIES=${BINDIR}/${HA_SS_NAME} ${BINDIR}/${HA_SS_NAME}-darwin-arm64 ${BINDIR}/${HA_SS_NAME}-linux-arm64
@@ -22,6 +26,9 @@ BINARIES+=${BINDIR}/${AVIVAMYMONEY_NAME} ${BINDIR}/${AVIVAMYMONEY_NAME}-darwin-a
 BINARIES+=${BINDIR}/${NUTMEG_NAME} ${BINDIR}/${NUTMEG_NAME}-darwin-arm64 ${BINDIR}/${NUTMEG_NAME}-linux-arm64
 BINARIES+=${BINDIR}/${FUND_NAME} ${BINDIR}/${FUND_NAME}-darwin-arm64 ${BINDIR}/${FUND_NAME}-linux-arm64
 BINARIES+=${BINDIR}/${MONEYFARM_NAME} ${BINDIR}/${MONEYFARM_NAME}-darwin-arm64 ${BINDIR}/${MONEYFARM_NAME}-linux-arm64
+BINARIES+=${BINDIR}/${MONEYHUB_NAME} ${BINDIR}/${MONEYHUB_NAME}-darwin-arm64 ${BINDIR}/${MONEYHUB_NAME}-linux-arm64
+BINARIES+=${BINDIR}/${OCTOPUSWHEEL_NAME} ${BINDIR}/${OCTOPUSWHEEL_NAME}-darwin-arm64 ${BINDIR}/${OCTOPUSWHEEL_NAME}-linux-arm64
+
 
 all: ${BINDIR} ${BINARIES} otp
 
@@ -97,7 +104,29 @@ ${BINDIR}/${MONEYFARM_NAME}-darwin-arm64: ${MONEYFARM_SOURCE}
 ${BINDIR}/${MONEYFARM_NAME}-linux-arm64: ${MONEYFARM_SOURCE}
 	GOARCH=arm64 GOOS=linux go build -o $@ $<
 
-test: testha testaviva testavivamymoney testnutmeg testfund testmoneyfarm
+# moneyhub
+#
+${BINDIR}/${MONEYHUB_NAME}: ${MONEYHUB_SOURCE}
+	go build -o $@ $<
+
+${BINDIR}/${MONEYHUB_NAME}-darwin-arm64: ${MONEYHUB_SOURCE}
+	GOARCH=arm64 GOOS=darwin go build -o $@ $<
+
+${BINDIR}/${MONEYHUB_NAME}-linux-arm64: ${MONEYHUB_SOURCE}
+	GOARCH=arm64 GOOS=linux go build -o $@ $<
+
+# octopus wheel
+#
+${BINDIR}/${OCTOPUSWHEEL_NAME}: ${OCTOPUSWHEEL_SOURCE}
+	go build -o $@ $<
+
+${BINDIR}/${OCTOPUSWHEEL_NAME}-darwin-arm64: ${OCTOPUSWHEEL_SOURCE}
+	GOARCH=arm64 GOOS=darwin go build -o $@ $<
+
+${BINDIR}/${OCTOPUSWHEEL_NAME}-linux-arm64: ${OCTOPUSWHEEL_SOURCE}
+	GOARCH=arm64 GOOS=linux go build -o $@ $<
+
+test: testha testaviva testavivamymoney testnutmeg testfund testmoneyfarm testmoneyhub
 
 testha: ${BINDIR}/${HA_SS_NAME}
 	${BINDIR}/${HA_SS_NAME} -help
@@ -131,6 +160,14 @@ testmoneyfarm: ${BINDIR}/${MONEYFARM_NAME}
 	${BINDIR}/${MONEYFARM_NAME} -username "$(TEST1_MONEYFARM_USERNAME)" -password "$(TEST1_MONEYFARM_PASSWORD)" -otpcleancommand "$(MONEYFARM_OTPCLEANCOMMAND)" -otpcommand "$(MONEYFARM_OTPCOMMAND)"
 	${BINDIR}/${MONEYFARM_NAME} -username "$(TEST2_MONEYFARM_USERNAME)" -password "$(TEST2_MONEYFARM_PASSWORD)" -otpcleancommand "$(MONEYFARM_OTPCLEANCOMMAND)" -otpcommand "$(MONEYFARM_OTPCOMMAND)"
 
+testmoneyhub: ${BINDIR}/${MONEYHUB_NAME}
+	${BINDIR}/${MONEYHUB_NAME} -help
+	MONEYHUB_BALANCE=$(shell ${BINDIR}/${AVIVAMYMONEY_NAME} -username "$(AVIVAMYMONEY_USERNAME)" -password "$(AVIVAMYMONEY_PASSWORD)"  -word "$(AVIVAMYMONEY_WORD)" -headless=false); \
+	${BINDIR}/${MONEYHUB_NAME} -username "$(TEST1_MONEYHUB_USERNAME)" -password "$(TEST1_MONEYHUB_PASSWORD)" -account "$(TEST1_MONEYHUB_ACCOUNT)" -balance $$MONEYHUB_BALANCE
+
+testoctopuswheel: ${BINDIR}/${OCTOPUSWHEEL_NAME}
+	${BINDIR}/${OCTOPUSWHEEL_NAME} -help
+	${BINDIR}/${OCTOPUSWHEEL_NAME} -username "$(TEST1_OCTOPUS_USERNAME)" -password "$(TEST1_OCTOPUS_PASSWORD)"
 
 clean:
 	@go clean

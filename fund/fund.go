@@ -86,7 +86,7 @@ func main() {
 
 	// main page & login
 	//
-	log.Printf("Starting chromium\n")
+	log.Printf("Starting fund\n")
 	_, err = page.Goto("https://markets.ft.com/data/funds/tearsheet/summary?s="+*fund, playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 	if err != nil {
 		browser.Close()
