@@ -17,6 +17,21 @@ import (
 	"github.com/playwright-community/playwright-go"
 )
 
+var page playwright.Page
+
+// on error, do a screenshot if we can
+func failureScreenshot() {
+	r := recover()
+	if r != nil {
+		log.Println("Failure:", r)
+		filename := "fund.png"
+		if page != nil {
+			page.Screenshot(playwright.PageScreenshotOptions{FullPage: playwright.Bool(true), Path: playwright.String(filename)})
+			log.Printf("Final screen shot saved at " + filename)
+		}
+	}
+}
+
 func main() {
 
 	// defaults from environment
@@ -60,27 +75,28 @@ func main() {
 	//
 	err := playwright.Install(&playwright.RunOptions{Browsers: []string{"chromium"}})
 	if err != nil {
-		log.Fatalf("could not install playwright: %v", err)
+		panic(fmt.Sprintf("could not install playwright: %v", err))
 	}
 	pw, err := playwright.Run()
 	if err != nil {
-		log.Fatalf("could not launch playwright: %v", err)
+		panic(fmt.Sprintf("could not launch playwright: %v", err))
 	}
 	defer pw.Stop()
 	browser, err := pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{Headless: playwright.Bool(*headless)})
 	if err != nil {
-		log.Fatalf("could not launch Chromium: %v", err)
+		panic(fmt.Sprintf("could not launch Chromium: %v", err))
 	}
 	defer browser.Close()
-	page, err := browser.NewPage()
+	page, err = browser.NewPage()
 	if err != nil {
-		log.Fatalf("could not create page: %v", err)
+		panic(fmt.Sprintf("could not create page: %v", err))
 	}
+	defer failureScreenshot()
 	// Inject stealth script
 	//
 	err = stealth.Inject(page)
 	if err != nil {
-		log.Fatalf("could not inject stealth script: %v", err)
+		panic(fmt.Sprintf("could not inject stealth script: %v", err))
 	}
 
 	// main page & login
@@ -88,7 +104,7 @@ func main() {
 	log.Printf("Starting fund\n")
 	_, err = page.Goto("https://markets.ft.com/data/funds/tearsheet/summary?s="+*fund, playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 	if err != nil {
-		log.Fatalf("could not goto url: %v", err)
+		panic(fmt.Sprintf("could not goto url: %v", err))
 	}
 
 	// get value
@@ -97,7 +113,7 @@ func main() {
 	// <span class="mod-ui-data-list__value">11.89</span>
 	value, err := page.Locator("[class=mod-ui-data-list__value]").First().TextContent()
 	if err != nil {
-		log.Fatalf("failed to get balance: %v", err)
+		panic(fmt.Sprintf("failed to get balance: %v", err))
 	}
 	log.Println("value=" + value)
 	fmt.Println(value)

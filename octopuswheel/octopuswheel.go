@@ -17,6 +17,22 @@ import (
 	"github.com/playwright-community/playwright-go"
 )
 
+var page playwright.Page
+var username *string
+
+// on error, do a screenshot if we can
+func failureScreenshot() {
+	r := recover()
+	if r != nil {
+		log.Println("Failure:", r)
+		filename := "octopus_" + *username + ".png"
+		if page != nil {
+			page.Screenshot(playwright.PageScreenshotOptions{FullPage: playwright.Bool(true), Path: playwright.String(filename)})
+			log.Printf("Final screen shot saved at " + filename)
+		}
+	}
+}
+
 func main() {
 
 	// defaults from environment
@@ -41,7 +57,7 @@ func main() {
 	//
 	headless := flag.Bool("headless", defaultHeadless, "Headless mode")
 
-	username := flag.String("username", defaultUsername, "Octopus username")
+	username = flag.String("username", defaultUsername, "Octopus username")
 	password := flag.String("password", defaultPassword, "Octopus password")
 
 	// usage
@@ -68,27 +84,28 @@ func main() {
 	//
 	err = playwright.Install(&playwright.RunOptions{Browsers: []string{"chromium"}})
 	if err != nil {
-		log.Fatalf("could not install playwright: %v", err)
+		panic(fmt.Sprintf("could not install playwright: %v", err))
 	}
 	pw, err := playwright.Run()
 	if err != nil {
-		log.Fatalf("could not launch playwright: %v", err)
+		panic(fmt.Sprintf("could not launch playwright: %v", err))
 	}
 	defer pw.Stop()
 	browser, err := pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{Headless: playwright.Bool(*headless)})
 	if err != nil {
-		log.Fatalf("could not launch Chromium: %v", err)
+		panic(fmt.Sprintf("could not launch Chromium: %v", err))
 	}
 	defer browser.Close()
-	page, err := browser.NewPage()
+	page, err = browser.NewPage()
 	if err != nil {
-		log.Fatalf("could not create page: %v", err)
+		panic(fmt.Sprintf("could not create page: %v", err))
 	}
+	defer failureScreenshot()
 	// Inject stealth script
 	//
 	err = stealth.Inject(page)
 	if err != nil {
-		log.Fatalf("could not inject stealth script: %v", err)
+		panic(fmt.Sprintf("could not inject stealth script: %v", err))
 	}
 
 	// main page & login
@@ -96,29 +113,29 @@ func main() {
 	log.Printf("Starting login\n")
 	_, err = page.Goto("https://octopus.energy/login/", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 	if err != nil {
-		log.Fatalf("could not goto url: %v", err)
+		panic(fmt.Sprintf("could not goto url: %v", err))
 	}
 
 	log.Printf("Logging in\n")
 	err = page.Locator("#id_username").Fill(*username)
 	if err != nil {
-		log.Fatalf("could not get username: %v", err)
+		panic(fmt.Sprintf("could not get username: %v", err))
 	}
 	err = page.Locator("#id_password").Fill(*password)
 	if err != nil {
-		log.Fatalf("could not get password: %v", err)
+		panic(fmt.Sprintf("could not get password: %v", err))
 	}
 	err = page.Locator(".button").Click()
 	if err != nil {
-		log.Fatalf("could not click: %v", err)
+		panic(fmt.Sprintf("could not click: %v", err))
 	}
 	err = page.Locator(".jAWbYk").Click()
 	if err != nil {
-		log.Fatalf("could not click: %v", err)
+		panic(fmt.Sprintf("could not click: %v", err))
 	}
 	account, err := page.Locator(".AccountOverviewstyled__AccountNumber-sc-8x4vz-4").TextContent()
 	if err != nil {
-		log.Fatalf("could not click: %v", err)
+		panic(fmt.Sprintf("could not click: %v", err))
 	}
 
 	page.SetDefaultTimeout(5000)
@@ -128,7 +145,7 @@ func main() {
 	//
 	_, err = page.Goto("https://octopus.energy/dashboard/new/accounts/"+account+"/wheel-of-fortune/electricity", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 	if err != nil {
-		log.Fatalf("could not goto url: %v", err)
+		panic(fmt.Sprintf("could not goto url: %v", err))
 	}
 	page.Locator(".wheel").Click()
 
@@ -137,7 +154,7 @@ func main() {
 	//
 	_, err = page.Goto("https://octopus.energy/dashboard/new/accounts/"+account+"/wheel-of-fortune/gas", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 	if err != nil {
-		log.Fatalf("could not goto url: %v", err)
+		panic(fmt.Sprintf("could not goto url: %v", err))
 	}
 	page.Locator(".wheel").Click()
 

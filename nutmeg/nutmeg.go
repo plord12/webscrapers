@@ -22,6 +22,22 @@ import (
 	"github.com/playwright-community/playwright-go"
 )
 
+var page playwright.Page
+var username *string
+
+// on error, do a screenshot if we can
+func failureScreenshot() {
+	r := recover()
+	if r != nil {
+		log.Println("Failure:", r)
+		filename := "nutmeg_" + *username + ".png"
+		if page != nil {
+			page.Screenshot(playwright.PageScreenshotOptions{FullPage: playwright.Bool(true), Path: playwright.String(filename)})
+			log.Printf("Final screen shot saved at " + filename)
+		}
+	}
+}
+
 func main() {
 
 	// defaults from environment
@@ -59,7 +75,7 @@ func main() {
 	otpCleanCommand := flag.String("otpcleancommand", defaultOtpCleanCommand, "Command to clean previous one time password")
 	otpPath := flag.String("otppath", defaultOtpPath, "Path to file containing one time password message")
 
-	username := flag.String("username", defaultUsername, "Nutmeg username")
+	username = flag.String("username", defaultUsername, "Nutmeg username")
 	password := flag.String("password", defaultPassword, "Nutmeg password")
 
 	// usage
@@ -98,27 +114,28 @@ func main() {
 	//
 	err := playwright.Install(&playwright.RunOptions{Browsers: []string{"chromium"}})
 	if err != nil {
-		log.Fatalf("could not install playwright: %v", err)
+		panic(fmt.Sprintf("could not install playwright: %v", err))
 	}
 	pw, err := playwright.Run()
 	if err != nil {
-		log.Fatalf("could not launch playwright: %v", err)
+		panic(fmt.Sprintf("could not launch playwright: %v", err))
 	}
 	defer pw.Stop()
 	browser, err := pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{Headless: playwright.Bool(*headless)})
 	if err != nil {
-		log.Fatalf("could not launch Chromium: %v", err)
+		panic(fmt.Sprintf("could not launch Chromium: %v", err))
 	}
 	defer browser.Close()
-	page, err := browser.NewPage()
+	page, err = browser.NewPage()
 	if err != nil {
-		log.Fatalf("could not create page: %v", err)
+		panic(fmt.Sprintf("could not create page: %v", err))
 	}
+	defer failureScreenshot()
 	// Inject stealth script
 	//
 	err = stealth.Inject(page)
 	if err != nil {
-		log.Fatalf("could not inject stealth script: %v", err)
+		panic(fmt.Sprintf("could not inject stealth script: %v", err))
 	}
 
 	// main page & login
@@ -126,7 +143,7 @@ func main() {
 	log.Printf("Starting login\n")
 	_, err = page.Goto("https://authentication.nutmeg.com/login", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 	if err != nil {
-		log.Fatalf("could not goto url: %v", err)
+		panic(fmt.Sprintf("could not goto url: %v", err))
 	}
 
 	// accept cookies
@@ -137,17 +154,17 @@ func main() {
 	// <input class="input c4ea79246 c882875d6" inputmode="email" name="username" id="username" type="text" aria-label="Email address" value="" required="" autocomplete="off" autocapitalize="none" spellcheck="false" autofocus="">
 	err = page.Locator("#username").Fill(*username)
 	if err != nil {
-		log.Fatalf("could not get username: %v", err)
+		panic(fmt.Sprintf("could not get username: %v", err))
 	}
 	// <input class="input c4ea79246 c2946f7ad" name="password" id="password" type="password" aria-label="Password" required="" autocomplete="current-password" autocapitalize="none" spellcheck="false">
 	err = page.Locator("#password").Fill(*password)
 	if err != nil {
-		log.Fatalf("could not get password: %v", err)
+		panic(fmt.Sprintf("could not get password: %v", err))
 	}
 	// <button type="submit" name="action" value="default" class="c0a486a03 c3a925026 cc4e2760d cf0fbb154 c4b20090f" data-action-button-primary="true">Sign in</button>
 	err = page.GetByRole("button", playwright.PageGetByRoleOptions{Name: "Sign in"}).Click()
 	if err != nil {
-		log.Fatalf("could not click: %v", err)
+		panic(fmt.Sprintf("could not click: %v", err))
 	}
 
 	// attempt to fetch one time password if needed
@@ -181,7 +198,7 @@ func main() {
 				r := regexp.MustCompile(".*([0-9][0-9][0-9][0-9][0-9][0-9]).*")
 				match := r.FindStringSubmatch(string(data))
 				if len(match) != 2 {
-					log.Fatalf("could not parse one time password message: %v", err)
+					panic(fmt.Sprintf("could not parse one time password message: %v", err))
 				} else {
 					otp = match[1]
 				}
@@ -199,16 +216,16 @@ func main() {
 		// <label aria-hidden="true" class="cd7843ea8 c6c423b62 c6c2d595a" for="code">Enter the 6-digit code*</label>
 		err = page.GetByText("Enter the 6-digit code*", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Fill(otp)
 		if err != nil {
-			log.Fatalf("could not set otp: %v", err)
+			panic(fmt.Sprintf("could not set otp: %v", err))
 		}
 
 		// <button type="submit" name="action" value="default" class="c0a486a03 c3a925026 cc4e2760d cf0fbb154 c3a009796" data-action-button-primary="true">Continue</button>
 		err = page.GetByText("Continue", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click()
 		if err != nil {
-			log.Fatalf("could not click otp: %v", err)
+			panic(fmt.Sprintf("could not click otp: %v", err))
 		}
 	} else {
-		log.Fatalf("could not get one time password message: %v", err)
+		panic(fmt.Sprintf("could not get one time password message: %v", err))
 	}
 
 	// get balance
@@ -216,7 +233,7 @@ func main() {
 	// <span class="_nk-text_1a26s_12 nk-text _nk-amount_16djj_1 _nk-amount--theme-dark_16djj_49 _nk-amount--positive_16djj_10 _nk-amount--no-line-height_16djj_25 _nk-text--style-text-1_1a26s_60 _nk-text--fw-medium_1a26s_133 _nk-text--color-dark_1a26s_160 _nk-text--theme-dark--color-default_1a26s_356 _nk-text--theme-dark--color-dark_1a26s_362 _nk-text--tag-span_1a26s_103 _nk-text--size-xxl_1a26s_106" aria-label="£417,405" role="text" data-qa="portfolio-summary-overview__portfolio-value"><span class="_nk-text_1a26s_12 nk-text _nk-amount__prefix_16djj_46 _nk-text--no-line-height_1a26s_89 _nk-text--no-color_1a26s_172 _nk-text--style-text-1_1a26s_60 _nk-text--fw-medium_1a26s_133 _nk-text--tag-span_1a26s_103 _nk-text--size-xl_1a26s_109">£</span><span class="_nk-text_1a26s_12 nk-text _nk-text--no-line-height_1a26s_89 _nk-text--no-color_1a26s_172 _nk-text--style-text-1_1a26s_60 _nk-text--fw-medium_1a26s_133 _nk-text--tag-span_1a26s_103 _nk-text--size-xxl_1a26s_106" style="font-family: &quot;ivypresto-headline&quot;, sans-serif;">417,405</span></span>
 	balance, err := page.Locator("[data-qa=portfolio-summary-overview__portfolio-value]").TextContent()
 	if err != nil {
-		log.Fatalf("failed to get balance: %v", err)
+		panic(fmt.Sprintf("failed to get balance: %v", err))
 	}
 	log.Println("balance=" + balance)
 	fmt.Println(strings.NewReplacer("£", "", ",", "").Replace(balance))

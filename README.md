@@ -1,8 +1,6 @@
 # Webscrapers
 This contains a set of webscrapers I personally use.  
 
-They make use of [playwright-go](https://github.com/playwright-community/playwright-go) so that a single binary only is needed - browser depencies are auto downloaded.
-
 * [Aviva](#user-content-aviva)
 * [Aviva My Money](#user-content-aviva-my-money)
 * [Fund](#user-content-fund)
@@ -14,6 +12,21 @@ They make use of [playwright-go](https://github.com/playwright-community/playwri
 * [Octopus Wheel](#user-content-octopus-wheel)
 * [Desktop Testing](#user-content-desktop-testing)
 * [Pension Scripting](#user-content-pension-scripting)
+
+They make use of [playwright-go](https://github.com/playwright-community/playwright-go) so that a single binary only is needed - browser dependencies are auto downloaded if missing.
+
+```
+bin/fund -fund 0P0001JLD9
+Downloading Chromium 129.0.6668.29 (playwright build v1134) from https://playwright.azureedge.net/builds/chromium/1134/chromium-mac-arm64.zip
+139 MiB [====================] 100% 0.0s
+Chromium 129.0.6668.29 (playwright build v1134) downloaded to /Users/plord/Library/Caches/ms-playwright/chromium-1134
+Downloading FFMPEG playwright build v1010 from https://playwright.azureedge.net/builds/ffmpeg/1010/ffmpeg-mac-arm64.zip
+1.1 MiB [====================] 100% 0.0s
+FFMPEG playwright build v1010 downloaded to /Users/plord/Library/Caches/ms-playwright/ffmpeg-1010
+2024/11/12 13:14:51 Starting fund
+2024/11/12 13:14:54 value=11.95
+11.95
+```
 
 ## [Aviva](aviva)
 

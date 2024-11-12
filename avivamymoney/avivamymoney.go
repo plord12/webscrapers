@@ -18,6 +18,22 @@ import (
 	"github.com/playwright-community/playwright-go"
 )
 
+var page playwright.Page
+var username *string
+
+// on error, do a screenshot if we can
+func failureScreenshot() {
+	r := recover()
+	if r != nil {
+		log.Println("Failure:", r)
+		filename := "avivamymoney_" + *username + ".png"
+		if page != nil {
+			page.Screenshot(playwright.PageScreenshotOptions{FullPage: playwright.Bool(true), Path: playwright.String(filename)})
+			log.Printf("Final screen shot saved at " + filename)
+		}
+	}
+}
+
 func main() {
 
 	// defaults from environment
@@ -44,7 +60,7 @@ func main() {
 	//
 	headless := flag.Bool("headless", defaultHeadless, "Headless mode")
 
-	username := flag.String("username", defaultUsername, "Aviva my money username")
+	username = flag.String("username", defaultUsername, "Aviva my money username")
 	password := flag.String("password", defaultPassword, "Aviva my money password")
 	word := flag.String("word", defaultWord, "Aviva my money memorable word")
 
@@ -73,27 +89,28 @@ func main() {
 	//
 	err := playwright.Install(&playwright.RunOptions{Browsers: []string{"chromium"}})
 	if err != nil {
-		log.Fatalf("could not install playwright: %v", err)
+		panic(fmt.Sprintf("could not install playwright: %v", err))
 	}
 	pw, err := playwright.Run()
 	if err != nil {
-		log.Fatalf("could not launch playwright: %v", err)
+		panic(fmt.Sprintf("could not launch playwright: %v", err))
 	}
 	defer pw.Stop()
 	browser, err := pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{Headless: playwright.Bool(*headless)})
 	if err != nil {
-		log.Fatalf("could not launch Chromium: %v", err)
+		panic(fmt.Sprintf("could not launch Chromium: %v", err))
 	}
 	defer browser.Close()
-	page, err := browser.NewPage()
+	page, err = browser.NewPage()
 	if err != nil {
-		log.Fatalf("could not create page: %v", err)
+		panic(fmt.Sprintf("could not create page: %v", err))
 	}
+	defer failureScreenshot()
 	// Inject stealth script
 	//
 	err = stealth.Inject(page)
 	if err != nil {
-		log.Fatalf("could not inject stealth script: %v", err)
+		panic(fmt.Sprintf("could not inject stealth script: %v", err))
 	}
 
 	// main page & login
@@ -101,7 +118,7 @@ func main() {
 	log.Printf("Starting login\n")
 	_, err = page.Goto("https://www.avivamymoney.co.uk/Login", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 	if err != nil {
-		log.Fatalf("could not goto url: %v", err)
+		panic(fmt.Sprintf("could not goto url: %v", err))
 	}
 
 	// dismiss pop-up
@@ -112,17 +129,17 @@ func main() {
 	// <input autocomplete="off" id="Username" maxlength="50" name="Username" tabindex="1" type="text" value="">
 	err = page.Locator("#Username").Fill(*username)
 	if err != nil {
-		log.Fatalf("could not get username: %v", err)
+		panic(fmt.Sprintf("could not get username: %v", err))
 	}
 	// <input autocomplete="off" id="Username" maxlength="50" name="Username" tabindex="1" type="text" value="">
 	err = page.Locator("#Password").Fill(*password)
 	if err != nil {
-		log.Fatalf("could not get password: %v", err)
+		panic(fmt.Sprintf("could not get password: %v", err))
 	}
 	// <a href="#" "="" name="undefined" class="btn-primary full-width">Log in</a>
 	err = page.GetByText("Log in", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click()
 	if err != nil {
-		log.Fatalf("could not click: %v", err)
+		panic(fmt.Sprintf("could not click: %v", err))
 	}
 
 	// memorable word
@@ -132,28 +149,28 @@ func main() {
 	// <input id="FirstElement_Index" name="FirstElement.Index" type="hidden" value="3">
 	firstIndex, err := page.Locator("#FirstElement_Index").GetAttribute("value")
 	if err != nil {
-		log.Fatalf("could not get first element index: %v", err)
+		panic(fmt.Sprintf("could not get first element index: %v", err))
 	}
 	firstIndexInt, _ := strconv.Atoi(firstIndex)
 	page.Locator("#FirstLetter").SelectOption(playwright.SelectOptionValues{ValuesOrLabels: &[]string{(*word)[firstIndexInt-1 : firstIndexInt]}})
 
 	secondIndex, err := page.Locator("#SecondElement_Index").GetAttribute("value")
 	if err != nil {
-		log.Fatalf("could not get second element index: %v", err)
+		panic(fmt.Sprintf("could not get second element index: %v", err))
 	}
 	secondIndexInt, _ := strconv.Atoi(secondIndex)
 	page.Locator("#SecondLetter").SelectOption(playwright.SelectOptionValues{ValuesOrLabels: &[]string{(*word)[secondIndexInt-1 : secondIndexInt]}})
 
 	thirdIndex, err := page.Locator("#ThirdElement_Index").GetAttribute("value")
 	if err != nil {
-		log.Fatalf("could not get third element index: %v", err)
+		panic(fmt.Sprintf("could not get third element index: %v", err))
 	}
 	thirdIndexInt, _ := strconv.Atoi(thirdIndex)
 	page.Locator("#ThirdLetter").SelectOption(playwright.SelectOptionValues{ValuesOrLabels: &[]string{(*word)[thirdIndexInt-1 : thirdIndexInt]}})
 
 	err = page.GetByText("Next", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click()
 	if err != nil {
-		log.Fatalf("could not click next: %v", err)
+		panic(fmt.Sprintf("could not click next: %v", err))
 	}
 
 	// get balance
@@ -161,7 +178,7 @@ func main() {
 	// <p class="vspace-reset text-size-42">£22,332.98</p>
 	balance, err := page.Locator(".vspace-reset.text-size-42").TextContent()
 	if err != nil {
-		log.Fatalf("failed to get balance: %v", err)
+		panic(fmt.Sprintf("failed to get balance: %v", err))
 	}
 	log.Println("balance=" + balance)
 	fmt.Println(strings.NewReplacer("£", "", ",", "").Replace(balance))
