@@ -1,4 +1,6 @@
-include env
+# environment file containing test data
+#
+-include env
 export
 
 HA_SS_NAME=ha_ss
@@ -126,7 +128,7 @@ ${BINDIR}/${OCTOPUSWHEEL_NAME}-darwin-arm64: ${OCTOPUSWHEEL_SOURCE}
 ${BINDIR}/${OCTOPUSWHEEL_NAME}-linux-arm64: ${OCTOPUSWHEEL_SOURCE}
 	GOARCH=arm64 GOOS=linux go build -o $@ $<
 
-test: testha testaviva testavivamymoney testnutmeg testfund testmoneyfarm testmoneyhub
+test: testha testaviva testavivamymoney testnutmeg testfund testmoneyfarm testmoneyhub testoctopuswheel
 
 testha: ${BINDIR}/${HA_SS_NAME}
 	${BINDIR}/${HA_SS_NAME} -help

@@ -79,15 +79,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not launch playwright: %v", err)
 	}
+	defer pw.Stop()
 	browser, err := pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{Headless: playwright.Bool(*headless)})
 	if err != nil {
-		pw.Stop()
 		log.Fatalf("could not launch Chromium: %v", err)
 	}
+	defer browser.Close()
 	page, err := browser.NewPage()
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not create page: %v", err)
 	}
 	// Inject stealth script
@@ -102,8 +101,6 @@ func main() {
 	log.Printf("Starting login\n")
 	_, err = page.Goto("https://www.avivamymoney.co.uk/Login", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not goto url: %v", err)
 	}
 
@@ -115,22 +112,16 @@ func main() {
 	// <input autocomplete="off" id="Username" maxlength="50" name="Username" tabindex="1" type="text" value="">
 	err = page.Locator("#Username").Fill(*username)
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not get username: %v", err)
 	}
 	// <input autocomplete="off" id="Username" maxlength="50" name="Username" tabindex="1" type="text" value="">
 	err = page.Locator("#Password").Fill(*password)
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not get password: %v", err)
 	}
 	// <a href="#" "="" name="undefined" class="btn-primary full-width">Log in</a>
 	err = page.GetByText("Log in", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click()
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not click: %v", err)
 	}
 
@@ -141,8 +132,6 @@ func main() {
 	// <input id="FirstElement_Index" name="FirstElement.Index" type="hidden" value="3">
 	firstIndex, err := page.Locator("#FirstElement_Index").GetAttribute("value")
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not get first element index: %v", err)
 	}
 	firstIndexInt, _ := strconv.Atoi(firstIndex)
@@ -150,8 +139,6 @@ func main() {
 
 	secondIndex, err := page.Locator("#SecondElement_Index").GetAttribute("value")
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not get second element index: %v", err)
 	}
 	secondIndexInt, _ := strconv.Atoi(secondIndex)
@@ -159,8 +146,6 @@ func main() {
 
 	thirdIndex, err := page.Locator("#ThirdElement_Index").GetAttribute("value")
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not get third element index: %v", err)
 	}
 	thirdIndexInt, _ := strconv.Atoi(thirdIndex)
@@ -168,8 +153,6 @@ func main() {
 
 	err = page.GetByText("Next", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click()
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not click next: %v", err)
 	}
 
@@ -178,17 +161,8 @@ func main() {
 	// <p class="vspace-reset text-size-42">£22,332.98</p>
 	balance, err := page.Locator(".vspace-reset.text-size-42").TextContent()
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("failed to get balance: %v", err)
 	}
 	log.Println("balance=" + balance)
 	fmt.Println(strings.NewReplacer("£", "", ",", "").Replace(balance))
-
-	if err = browser.Close(); err != nil {
-		log.Fatalf("could not close browser: %v", err)
-	}
-	if err = pw.Stop(); err != nil {
-		log.Fatalf("could not stop Playwright: %v", err)
-	}
 }

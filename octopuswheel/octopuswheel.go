@@ -74,15 +74,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not launch playwright: %v", err)
 	}
+	defer pw.Stop()
 	browser, err := pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{Headless: playwright.Bool(*headless)})
 	if err != nil {
-		pw.Stop()
 		log.Fatalf("could not launch Chromium: %v", err)
 	}
+	defer browser.Close()
 	page, err := browser.NewPage()
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not create page: %v", err)
 	}
 	// Inject stealth script
@@ -97,40 +96,28 @@ func main() {
 	log.Printf("Starting login\n")
 	_, err = page.Goto("https://octopus.energy/login/", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not goto url: %v", err)
 	}
 
 	log.Printf("Logging in\n")
 	err = page.Locator("#id_username").Fill(*username)
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not get username: %v", err)
 	}
 	err = page.Locator("#id_password").Fill(*password)
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not get password: %v", err)
 	}
 	err = page.Locator(".button").Click()
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not click: %v", err)
 	}
 	err = page.Locator(".jAWbYk").Click()
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not click: %v", err)
 	}
 	account, err := page.Locator(".AccountOverviewstyled__AccountNumber-sc-8x4vz-4").TextContent()
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not click: %v", err)
 	}
 
@@ -141,8 +128,6 @@ func main() {
 	//
 	_, err = page.Goto("https://octopus.energy/dashboard/new/accounts/"+account+"/wheel-of-fortune/electricity", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not goto url: %v", err)
 	}
 	page.Locator(".wheel").Click()
@@ -152,13 +137,8 @@ func main() {
 	//
 	_, err = page.Goto("https://octopus.energy/dashboard/new/accounts/"+account+"/wheel-of-fortune/gas", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not goto url: %v", err)
 	}
 	page.Locator(".wheel").Click()
 
-	if err = pw.Stop(); err != nil {
-		log.Fatalf("could not stop Playwright: %v", err)
-	}
 }

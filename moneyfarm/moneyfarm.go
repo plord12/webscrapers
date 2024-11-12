@@ -104,15 +104,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not launch playwright: %v", err)
 	}
+	defer pw.Stop()
 	browser, err := pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{Headless: playwright.Bool(*headless)})
 	if err != nil {
-		pw.Stop()
 		log.Fatalf("could not launch Chromium: %v", err)
 	}
+	defer browser.Close()
 	page, err := browser.NewPage()
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not create page: %v", err)
 	}
 	// Inject stealth script
@@ -127,8 +126,6 @@ func main() {
 	log.Printf("Starting login\n")
 	_, err = page.Goto("https://app.moneyfarm.com/gb/sign-in", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not goto url: %v", err)
 	}
 
@@ -140,22 +137,16 @@ func main() {
 	// <input type="email" id="email" name="email" autocomplete="email" class="sc-dWddBi dbJxuP" value="">
 	err = page.Locator("#email").Fill(*username)
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not get username: %v", err)
 	}
 	// <input type="password" id="password" name="password" autocomplete="current-password" class="sc-dWddBi dbJxuP" value="">
 	err = page.Locator("#password").Fill(*password)
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not get password: %v", err)
 	}
 	// <button data-role="primary" type="submit" data-overlay="false" class="sc-hKgJUU jhVfGS"><span>Sign in</span></button>
 	err = page.GetByRole("button", playwright.PageGetByRoleOptions{Name: "Sign in"}).Click()
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not click: %v", err)
 	}
 
@@ -190,8 +181,6 @@ func main() {
 				r := regexp.MustCompile(".*([0-9][0-9][0-9][0-9][0-9][0-9]).*")
 				match := r.FindStringSubmatch(string(data))
 				if len(match) != 2 {
-					browser.Close()
-					pw.Stop()
 					log.Fatalf("could not parse one time password message: %v", err)
 				} else {
 					otp = match[1]
@@ -210,21 +199,15 @@ func main() {
 		// <input class="input c4ea79246 c954c3815 ce0672f58 c3f27bf21 c1a0fa5af" name="code" id="code" type="text" aria-invalid="true" aria-describedby="error-element-code" value="" required="" autocomplete="off" autocapitalize="none" spellcheck="false" autofocus=""><div class="cd7843ea8 js-required c6c423b62 c6c2d595a" data-dynamic-label-for="code" aria-hidden="true">Enter the 6-digit code*</div></div>
 		err = page.Locator("#code").Fill(otp)
 		if err != nil {
-			browser.Close()
-			pw.Stop()
 			log.Fatalf("could not set otp: %v", err)
 		}
 
 		// <button type="submit" name="action" value="default" class="c0a486a03 c3a925026 cc4e2760d cf0fbb154 c3a009796" data-action-button-primary="true">Continue</button>
 		err = page.GetByText("Continue", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click()
 		if err != nil {
-			browser.Close()
-			pw.Stop()
 			log.Fatalf("could not click otp: %v", err)
 		}
 	} else {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not get one time password message: %v", err)
 	}
 
@@ -233,17 +216,8 @@ func main() {
 	// <span aria-hidden="false" class="sc-jcRCNh ieovWt">£92,276.76</span>
 	balance, err := page.Locator("[class=\"sc-jcRCNh ieovWt\"]").First().TextContent()
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("failed to get balance: %v", err)
 	}
 	log.Println("balance=" + balance)
 	fmt.Println(strings.NewReplacer("£", "", ",", "").Replace(balance))
-
-	if err = browser.Close(); err != nil {
-		log.Fatalf("could not close browser: %v", err)
-	}
-	if err = pw.Stop(); err != nil {
-		log.Fatalf("could not stop Playwright: %v", err)
-	}
 }

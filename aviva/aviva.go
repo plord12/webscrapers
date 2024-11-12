@@ -103,15 +103,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not launch playwright: %v", err)
 	}
+	defer pw.Stop()
 	browser, err := pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{Headless: playwright.Bool(*headless)})
 	if err != nil {
 		pw.Stop()
 		log.Fatalf("could not launch Chromium: %v", err)
 	}
+	defer browser.Close()
 	page, err := browser.NewPage()
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not create page: %v", err)
 	}
 	// Inject stealth script
@@ -126,8 +126,6 @@ func main() {
 	log.Printf("Starting login\n")
 	_, err = page.Goto("https://www.direct.aviva.co.uk/MyAccount/login", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not goto url: %v", err)
 	}
 
@@ -140,22 +138,16 @@ func main() {
 	// <input aria-required="True" autocomplete="off" class="a-textbox" data-qa-textbox="username" data-val="true" data-val-required="Please enter your username" id="username" maxlength="50" name="username" type="text" value="">
 	err = page.Locator("#username").Fill(*username)
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not get username: %v", err)
 	}
 	// <input aria-required="True" autocomplete="off" class="a-textbox" data-qa-textbox="password" data-val="true" data-val-required="Please enter your password" id="password" maxlength="300" name="password" type="password">
 	err = page.Locator("#password").Fill(*password)
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not get password: %v", err)
 	}
 	// <input id="loginButton" name="loginButton" class="a-button a-button--primary dd-data-link" data-dd-group="myAvivaLogin" data-dd-loc="login" data-dd-link="login" type="submit" value="Log in" data-qa-button="submitForm">
 	err = page.Locator("#loginButton").Click()
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not click: %v", err)
 	}
 
@@ -190,8 +182,6 @@ func main() {
 				r := regexp.MustCompile(".*([0-9][0-9][0-9][0-9][0-9][0-9]).*")
 				match := r.FindStringSubmatch(string(data))
 				if len(match) != 2 {
-					browser.Close()
-					pw.Stop()
 					log.Fatalf("could not parse one time password message: %v", err)
 				} else {
 					otp = match[1]
@@ -207,20 +197,14 @@ func main() {
 
 		err = page.Locator("#factor").Fill(otp)
 		if err != nil {
-			browser.Close()
-			pw.Stop()
 			log.Fatalf("could not set otp: %v", err)
 		}
 
 		err = page.Locator("#VerifyMFA").Click()
 		if err != nil {
-			browser.Close()
-			pw.Stop()
 			log.Fatalf("could not click otp: %v", err)
 		}
 	} else {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not get one time password message: %v", err)
 	}
 
@@ -230,25 +214,14 @@ func main() {
 	// <a data-qa-button="Details" data-dd-link="Details" data-dd-loc="roundel" data-dd-group="myavivaHomePage" href="/MyPortfolio/ViewDetail?id=A3Acnhvs2bv17h0NKjx1t0s0fhGjFYRBO_3hxv9uIG41&amp;productCode=50010" class="button yellow dd-data-link">Details</a>
 	err = page.Locator("[data-qa-button=Details]").Click()
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("failed to click on details: %v", err)
 	}
 
 	// <p class="a-heading a-heading--0 font-yellow u-margin--top-none" data-qa-field="yourPensionValue">£123,456.72</p>
 	balance, err := page.Locator("[data-qa-field=yourPensionValue]").TextContent()
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("failed to get balance: %v", err)
 	}
 	log.Println("balance=" + balance)
 	fmt.Println(strings.NewReplacer("£", "", ",", "").Replace(balance))
-
-	if err = browser.Close(); err != nil {
-		log.Fatalf("could not close browser: %v", err)
-	}
-	if err = pw.Stop(); err != nil {
-		log.Fatalf("could not stop Playwright: %v", err)
-	}
 }

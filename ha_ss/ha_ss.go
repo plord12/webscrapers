@@ -121,7 +121,6 @@ func main() {
 			log.Fatal(err.Error())
 		}
 	}
-
 }
 
 func screenshot(headless bool, username string, password string, url string, css string, filename string) error {
@@ -136,47 +135,35 @@ func screenshot(headless bool, username string, password string, url string, css
 	if err != nil {
 		return fmt.Errorf("could not launch playwright: %v", err)
 	}
-	browser, err := pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{
-		Headless: playwright.Bool(headless),
-	})
+	defer pw.Stop()
+	browser, err := pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{Headless: playwright.Bool(headless)})
 	if err != nil {
-		pw.Stop()
 		return fmt.Errorf("could not launch Chromium: %v", err)
 	}
+	defer browser.Close()
 	page, err := browser.NewPage()
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		return fmt.Errorf("could not create page: %v", err)
 	}
 
 	// main page & login
 	//
 	log.Printf("Starting chromium at %s\n", url)
-	if _, err = page.Goto(url, playwright.PageGotoOptions{
-		WaitUntil: playwright.WaitUntilStateDomcontentloaded,
-	}); err != nil {
-		browser.Close()
-		pw.Stop()
+	_, err = page.Goto(url, playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
+	if err != nil {
 		return fmt.Errorf("could not goto url: %v", err)
 	}
 	log.Printf("Logging in\n")
 	err = page.Locator("[name=username]").First().Fill(username)
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		return fmt.Errorf("could not get username: %v", err)
 	}
 	err = page.Locator("[name=password]").First().Fill(password)
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		return fmt.Errorf("could not get password: %v", err)
 	}
 	err = page.Locator("[id=button]").Click()
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		return fmt.Errorf("could not click: %v", err)
 	}
 
@@ -192,14 +179,10 @@ func screenshot(headless bool, username string, password string, url string, css
 		log.Printf("Attempting screenshot %s\n", css)
 		screenshot, err := page.Locator(css).Screenshot(playwright.LocatorScreenshotOptions{Path: playwright.String(filename)})
 		if err != nil {
-			browser.Close()
-			pw.Stop()
 			return fmt.Errorf("could not get screenshot: %v", err)
 		}
 		image, err := png.Decode(bytes.NewReader(screenshot))
 		if err != nil {
-			browser.Close()
-			pw.Stop()
 			return fmt.Errorf("could not read png: %v", err)
 		}
 		if isBlankImage(image) {
@@ -210,13 +193,6 @@ func screenshot(headless bool, username string, password string, url string, css
 	}
 
 	log.Printf("Saved %s\n", filename)
-
-	if err = browser.Close(); err != nil {
-		return fmt.Errorf("could not close browser: %v", err)
-	}
-	if err = pw.Stop(); err != nil {
-		return fmt.Errorf("could not stop Playwright: %v", err)
-	}
 
 	return nil
 }

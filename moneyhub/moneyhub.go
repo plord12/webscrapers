@@ -90,15 +90,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not launch playwright: %v", err)
 	}
+	defer pw.Stop()
 	browser, err := pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{Headless: playwright.Bool(*headless)})
 	if err != nil {
-		pw.Stop()
 		log.Fatalf("could not launch Chromium: %v", err)
 	}
+	defer browser.Close()
 	page, err := browser.NewPage()
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not create page: %v", err)
 	}
 	// Inject stealth script
@@ -113,8 +112,6 @@ func main() {
 	log.Printf("Starting login\n")
 	_, err = page.Goto("https://client.moneyhub.co.uk", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not goto url: %v", err)
 	}
 
@@ -122,22 +119,16 @@ func main() {
 	// <input name="email" id="email" autocomplete="username" data-aid="field-email" type="email" class="sc-eNQAEJ hgPDnc" value="">
 	err = page.Locator("#email").Fill(*username)
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not get username: %v", err)
 	}
 	// <input name="password" id="password" data-aid="field-password" type="password" minlength="10" autocomplete="current-password" class="sc-hSdWYo kBIXYI" value="">
 	err = page.Locator("#password").Fill(*password)
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not get password: %v", err)
 	}
 	// <span class="sc-bxivhb sc-ifAKCX byYfdZ">Log in</span>
 	err = page.GetByRole("button", playwright.PageGetByRoleOptions{Name: "Log in"}).Click()
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not click: %v", err)
 	}
 
@@ -145,58 +136,38 @@ func main() {
 	//
 	_, err = page.Goto("https://client.moneyhub.co.uk/#assets", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not goto assets: %v", err)
 	}
 	// <div data-aid="ListItemTitle" class="sc-bxivhb list-item-title__Title-sc-uq1r70-0 bOSooI">Peter Moneyfarm ISA [ manual ]</div>
 	var delay = 500.0
 	err = page.GetByText(*account, playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click(playwright.LocatorClickOptions{Delay: &delay})
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not goto asset: %v", err)
 	}
 	// <button label="appChrome.edit" data-aid="nav-bar-edit" aria-label="Edit Account" class="button__Button-sc-182rbpd-0 czyaZa"><div height="32px" width="32px" style="pointer-events: none;" aria-hidden="true"><div>...
 	err = page.Locator("[label=\"appChrome.edit\"]").Click()
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not edit asset: %v", err)
 	}
 	//<span class="sc-bxivhb sc-ifAKCX byYfdZ">Update valuation</span>
 	//<span class="sc-bxivhb sc-ifAKCX byYfdZ">Update balance</span>
 	err = page.GetByText(regexp.MustCompile("^Update ")).Click()
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not update asset: %v", err)
 	}
 	// <input name="balance" id="balance" type="text" inputmode="decimal" pattern="[0-9]*.?[0-9]*" autocomplete="off" class="sc-cSHVUG jVBxUm" value="92276.76">
 	err = page.Locator("#balance").Clear()
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not clear balance: %v", err)
 	}
 	err = page.Locator("#balance").Fill(fmt.Sprintf("%0.2f", *balance))
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not update balance: %v", err)
 	}
 	err = page.GetByText("Save", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click()
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not save balance: %v", err)
 	}
 
 	log.Println("Account " + *account + " updated to " + fmt.Sprintf("%0.2f", *balance))
-	if err = browser.Close(); err != nil {
-		log.Fatalf("could not close browser: %v", err)
-	}
-	if err = pw.Stop(); err != nil {
-		log.Fatalf("could not stop Playwright: %v", err)
-	}
 }

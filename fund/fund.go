@@ -66,15 +66,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not launch playwright: %v", err)
 	}
+	defer pw.Stop()
 	browser, err := pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{Headless: playwright.Bool(*headless)})
 	if err != nil {
-		pw.Stop()
 		log.Fatalf("could not launch Chromium: %v", err)
 	}
+	defer browser.Close()
 	page, err := browser.NewPage()
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not create page: %v", err)
 	}
 	// Inject stealth script
@@ -89,8 +88,6 @@ func main() {
 	log.Printf("Starting fund\n")
 	_, err = page.Goto("https://markets.ft.com/data/funds/tearsheet/summary?s="+*fund, playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("could not goto url: %v", err)
 	}
 
@@ -100,17 +97,8 @@ func main() {
 	// <span class="mod-ui-data-list__value">11.89</span>
 	value, err := page.Locator("[class=mod-ui-data-list__value]").First().TextContent()
 	if err != nil {
-		browser.Close()
-		pw.Stop()
 		log.Fatalf("failed to get balance: %v", err)
 	}
 	log.Println("value=" + value)
 	fmt.Println(value)
-
-	if err = browser.Close(); err != nil {
-		log.Fatalf("could not close browser: %v", err)
-	}
-	if err = pw.Stop(); err != nil {
-		log.Fatalf("could not stop Playwright: %v", err)
-	}
 }
