@@ -3,6 +3,18 @@ This contains a set of webscrapers I personally use.
 
 They make use of [playwright-go](https://github.com/playwright-community/playwright-go) so that a single binary only is needed - browser depencies are auto downloaded.
 
+* [Aviva](#user-content-aviva)
+* [Aviva My Money](#user-content-aviva-my-money)
+* [Fund](#user-content-fund)
+* [Home Assistant Screen Shot](#user-content-home-assistant-screen-shot)
+* [Home Assistant Screen Shot Addon](#user-content-home-assistant-screen-shot-addon)
+* [Moneyfarm](#user-content-moneyfarm)
+* [Money Hub](#user-content-money-hub)
+* [Nutmeg](#user-content-nutmeg)
+* [Octopus Wheel](#user-content-octopus-wheel)
+* [Desktop Testing](#user-content-desktop-testing)
+* [Pension Scripting](#user-content-pension-scripting)
+
 ## [Aviva](aviva)
 
 Connect to [Aviva](https://www.direct.aviva.co.uk/MyAccount/login), login, process one-time-password and return account balance.
@@ -85,7 +97,7 @@ Environment variables:
 
 ## [Home Assistant Screen Shot](ha_ss)
 
-Connect to local Home Assistant instance, login and take a screen short based on CSS selector.
+Connect to local Home Assistant instance, login and take a screen shot based on CSS selector.
 
 ```
 Connect to Home Assistant and take a screenshot by CSS selector
