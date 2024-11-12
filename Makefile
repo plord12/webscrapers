@@ -4,7 +4,7 @@
 export
 
 HA_SS_NAME=ha_ss
-HA_SS_SOURCE=ha_ss/ha_ss.go
+HA_SS_SOURCE=${HA_SS_NAME}/${HA_SS_NAME}.go
 AVIVA_NAME=aviva
 AVIVA_SOURCE=${AVIVA_NAME}/${AVIVA_NAME}.go
 AVIVAMYMONEY_NAME=avivamymoney
@@ -19,6 +19,8 @@ MONEYHUB_NAME=moneyhub
 MONEYHUB_SOURCE=${MONEYHUB_NAME}/${MONEYHUB_NAME}.go
 OCTOPUSWHEEL_NAME=octopuswheel
 OCTOPUSWHEEL_SOURCE=${OCTOPUSWHEEL_NAME}/${OCTOPUSWHEEL_NAME}.go
+MYCAUSEUK_NAME=mycauseuk
+MYCAUSEUK_SOURCE=${MYCAUSEUK_NAME}/${MYCAUSEUK_NAME}.go
 
 BINDIR=bin
 BINARIES=${BINDIR}/${HA_SS_NAME} ${BINDIR}/${HA_SS_NAME}-linux-arm64
@@ -29,7 +31,7 @@ BINARIES+=${BINDIR}/${FUND_NAME}
 BINARIES+=${BINDIR}/${MONEYFARM_NAME} 
 BINARIES+=${BINDIR}/${MONEYHUB_NAME} 
 BINARIES+=${BINDIR}/${OCTOPUSWHEEL_NAME} 
-
+BINARIES+=${BINDIR}/${MYCAUSEUK_NAME} 
 
 all: ${BINDIR} ${BINARIES} otp
 
@@ -82,6 +84,11 @@ ${BINDIR}/${MONEYHUB_NAME}: ${MONEYHUB_SOURCE}
 ${BINDIR}/${OCTOPUSWHEEL_NAME}: ${OCTOPUSWHEEL_SOURCE}
 	go build -o $@ $<
 
+# mycauseuk
+#
+${BINDIR}/${MYCAUSEUK_NAME}: ${MYCAUSEUK_SOURCE}
+	go build -o $@ $<
+
 test: testha testaviva testavivamymoney testnutmeg testfund testmoneyfarm testmoneyhub testoctopuswheel
 
 testha: ${BINDIR}/${HA_SS_NAME}
@@ -124,6 +131,10 @@ testmoneyhub: ${BINDIR}/${MONEYHUB_NAME}
 testoctopuswheel: ${BINDIR}/${OCTOPUSWHEEL_NAME}
 	${BINDIR}/${OCTOPUSWHEEL_NAME} -help
 	${BINDIR}/${OCTOPUSWHEEL_NAME} -username "$(TEST1_OCTOPUS_USERNAME)" -password "$(TEST1_OCTOPUS_PASSWORD)"
+
+testmycauseuk: ${BINDIR}/${MYCAUSEUK_NAME}
+	${BINDIR}/${MYCAUSEUK_NAME} -help
+	${BINDIR}/${MYCAUSEUK_NAME} -username "$(TEST1_MYCAUSEUK_USERNAME)" -password "$(TEST1_MYCAUSEUK_PASSWORD)"
 
 clean:
 	@go clean
