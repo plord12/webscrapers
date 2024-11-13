@@ -28,8 +28,10 @@ func failureScreenshot() {
 		log.Println("Failure:", r)
 		filename := "moneyhub_" + *username + ".png"
 		if page != nil {
-			page.Screenshot(playwright.PageScreenshotOptions{FullPage: playwright.Bool(true), Path: playwright.String(filename)})
-			log.Printf("Final screen shot saved at " + filename)
+			_, err := page.Screenshot(playwright.PageScreenshotOptions{FullPage: playwright.Bool(true), Path: playwright.String(filename)})
+			if err == nil {
+				log.Printf("Final screen shot saved at " + filename)
+			}
 		}
 	}
 }
