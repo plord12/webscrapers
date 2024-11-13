@@ -7,6 +7,7 @@ Update meoneyhub balance
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"log"
@@ -189,4 +190,6 @@ func main() {
 	}
 
 	log.Println("Account " + *account + " updated to " + fmt.Sprintf("%0.2f", *balance))
+
+	bufio.NewWriter(os.Stdout).Flush()
 }

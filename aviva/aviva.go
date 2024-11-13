@@ -7,6 +7,7 @@ Get aviva balance
 package main
 
 import (
+	"bufio"
 	"errors"
 	"flag"
 	"fmt"
@@ -243,4 +244,6 @@ func main() {
 	}
 	log.Println("balance=" + balance)
 	fmt.Println(strings.NewReplacer("£", "", ",", "").Replace(balance))
+
+	bufio.NewWriter(os.Stdout).Flush()
 }

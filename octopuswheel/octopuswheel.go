@@ -7,6 +7,7 @@ sping octopus wheel
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"log"
@@ -160,4 +161,5 @@ func main() {
 	}
 	page.Locator(".wheel").Click()
 
+	bufio.NewWriter(os.Stdout).Flush()
 }

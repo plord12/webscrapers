@@ -7,6 +7,7 @@ Get fund value
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"log"
@@ -119,4 +120,7 @@ func main() {
 	}
 	log.Println("value=" + value)
 	fmt.Println(value)
+
+	bufio.NewWriter(os.Stdout).Flush()
+
 }

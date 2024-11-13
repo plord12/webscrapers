@@ -7,6 +7,7 @@ Get mycause uk events
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"log"
@@ -162,4 +163,5 @@ func main() {
 		fmt.Println()
 	}
 
+	bufio.NewWriter(os.Stdout).Flush()
 }
