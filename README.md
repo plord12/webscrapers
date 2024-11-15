@@ -60,6 +60,8 @@ Environment variables:
   $AVIVA_PASSWORD - Aviva password
 ```
 
+Note playwright can be defeated by Aviva's Akamai CDN, so a python version is also included that uses selenium undetected_chromedriver.
+
 ## [Aviva My Money](avivamymoney)
 
 Connect to [Aviva My Money](https://www.avivamymoney.co.uk/Login), login and return account balance.
@@ -86,6 +88,8 @@ Environment variables:
   $AVIVAMYMONEY_PASSWORD - Aviva my money password
   $AVIVAMYMONEY_WORD - Aviva my money memorable word
 ```
+
+Note playwright can be defeated by Aviva's Akamai CDN, so a python version is also included that uses selenium undetected_chromedriver.
 
 ## [Fund](fund)
 

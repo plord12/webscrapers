@@ -111,6 +111,9 @@ testavivamymoney: ${BINDIR}/${AVIVAMYMONEY_NAME}
 	${BINDIR}/${AVIVAMYMONEY_NAME} -help
 	${BINDIR}/${AVIVAMYMONEY_NAME} -username "$(AVIVAMYMONEY_USERNAME)" -password "$(AVIVAMYMONEY_PASSWORD)"  -word "$(AVIVAMYMONEY_WORD)"
 
+testavivamymoneyselenium:
+	python3 ${AVIVAMYMONEY_NAME}/${AVIVAMYMONEY_NAME}.py
+
 testnutmeg: ${BINDIR}/${NUTMEG_NAME}
 	${BINDIR}/${NUTMEG_NAME} -help
 	${BINDIR}/${NUTMEG_NAME} -username "$(TEST1_NUTMEG_USERNAME)" -password "$(TEST1_NUTMEG_PASSWORD)" -otpcleancommand "$(NUTMEG_OTPCLEANCOMMAND)" -otpcommand "$(NUTMEG_OTPCOMMAND)"
