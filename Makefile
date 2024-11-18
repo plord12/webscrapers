@@ -131,7 +131,7 @@ testmoneyfarm: ${BINDIR}/${MONEYFARM_NAME}
 
 testmoneyhub: ${BINDIR}/${MONEYHUB_NAME}
 	${BINDIR}/${MONEYHUB_NAME} -help
-	MONEYHUB_BALANCE=$(shell ${BINDIR}/${AVIVAMYMONEY_NAME} -username "$(AVIVAMYMONEY_USERNAME)" -password "$(AVIVAMYMONEY_PASSWORD)"  -word "$(AVIVAMYMONEY_WORD)" -headless=false); \
+	MONEYHUB_BALANCE=$(shell ${BINDIR}/${NUTMEG_NAME} -username "$(TEST1_NUTMEG_USERNAME)" -password "$(TEST1_NUTMEG_PASSWORD)" -otpcleancommand "$(NUTMEG_OTPCLEANCOMMAND)" -otpcommand "$(NUTMEG_OTPCOMMAND)"   -headless=false); \
 	${BINDIR}/${MONEYHUB_NAME} -username "$(TEST1_MONEYHUB_USERNAME)" -password "$(TEST1_MONEYHUB_PASSWORD)" -account "$(TEST1_MONEYHUB_ACCOUNT)" -balance $$MONEYHUB_BALANCE
 
 testoctopuswheel: ${BINDIR}/${OCTOPUSWHEEL_NAME}

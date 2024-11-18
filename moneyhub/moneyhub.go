@@ -158,9 +158,11 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("could not goto assets: %v", err))
 	}
+	// occational "Stay Connected" pop-up
+	page.GetByText("Stay connected", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click(playwright.LocatorClickOptions{Timeout: playwright.Float(500.0)})
+
 	// <div data-aid="ListItemTitle" class="sc-bxivhb list-item-title__Title-sc-uq1r70-0 bOSooI">Peter Moneyfarm ISA [ manual ]</div>
-	var delay = 500.0
-	err = page.GetByText(*account, playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click(playwright.LocatorClickOptions{Delay: &delay})
+	err = page.GetByText(*account, playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click(playwright.LocatorClickOptions{Delay: playwright.Float(500.0)})
 	if err != nil {
 		panic(fmt.Sprintf("could not goto asset: %v", err))
 	}
