@@ -134,7 +134,8 @@ func main() {
 		panic(fmt.Sprintf("could not launch Chromium: %v", err))
 	}
 
-	page, err = browser.NewPage(playwright.BrowserNewPageOptions{RecordVideo: &playwright.RecordVideo{Dir: "videos/"}})
+	const userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9"
+	page, err = browser.NewPage(playwright.BrowserNewPageOptions{RecordVideo: &playwright.RecordVideo{Dir: "videos/"}, UserAgent: playwright.String(userAgent)})
 	if err != nil {
 		panic(fmt.Sprintf("could not create page: %v", err))
 	}
