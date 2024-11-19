@@ -123,6 +123,7 @@ testfund: ${BINDIR}/${FUND_NAME}
 	${BINDIR}/${FUND_NAME} -help
 	${BINDIR}/${FUND_NAME} -fund "$(TEST1_FUND)"
 	${BINDIR}/${FUND_NAME} -fund "$(TEST2_FUND)"
+	${BINDIR}/${FUND_NAME} -fund "$(TEST3_FUND)"
 
 testmoneyfarm: ${BINDIR}/${MONEYFARM_NAME}
 	${BINDIR}/${MONEYFARM_NAME} -help

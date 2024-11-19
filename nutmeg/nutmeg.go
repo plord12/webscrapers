@@ -24,21 +24,26 @@ import (
 )
 
 var page playwright.Page
-var username *string
+var pw *playwright.Playwright
 
-// on error, do a screenshot if we can
-func failureScreenshot() {
+func finish() {
+	page.Close()
+
+	// on error, save video if we can
 	r := recover()
 	if r != nil {
 		log.Println("Failure:", r)
-		filename := "nutmeg_" + *username + ".png"
-		if page != nil {
-			_, err := page.Screenshot(playwright.PageScreenshotOptions{FullPage: playwright.Bool(true), Path: playwright.String(filename)})
-			if err == nil {
-				log.Printf("Final screen shot saved at " + filename)
-			}
+		path, err := page.Video().Path()
+		if err == nil {
+			log.Printf("Final screen video saved at %s\n", path)
+		} else {
+			log.Printf("Failed to save final video: %v\n", err)
 		}
+	} else {
+		page.Video().Delete()
 	}
+
+	pw.Stop()
 }
 
 func main() {
@@ -78,7 +83,7 @@ func main() {
 	otpCleanCommand := flag.String("otpcleancommand", defaultOtpCleanCommand, "Command to clean previous one time password")
 	otpPath := flag.String("otppath", defaultOtpPath, "Path to file containing one time password message")
 
-	username = flag.String("username", defaultUsername, "Nutmeg username")
+	username := flag.String("username", defaultUsername, "Nutmeg username")
 	password := flag.String("password", defaultPassword, "Nutmeg password")
 
 	// usage
@@ -119,21 +124,21 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("could not install playwright: %v", err))
 	}
-	pw, err := playwright.Run()
+	pw, err = playwright.Run()
 	if err != nil {
 		panic(fmt.Sprintf("could not launch playwright: %v", err))
 	}
-	defer pw.Stop()
+	defer finish()
 	browser, err := pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{Headless: playwright.Bool(*headless)})
 	if err != nil {
 		panic(fmt.Sprintf("could not launch Chromium: %v", err))
 	}
-	defer browser.Close()
-	page, err = browser.NewPage()
+
+	page, err = browser.NewPage(playwright.BrowserNewPageOptions{RecordVideo: &playwright.RecordVideo{Dir: "videos/"}})
 	if err != nil {
 		panic(fmt.Sprintf("could not create page: %v", err))
 	}
-	defer failureScreenshot()
+
 	// Inject stealth script
 	//
 	err = stealth.Inject(page)
