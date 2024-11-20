@@ -3,6 +3,8 @@
 -include env
 export
 
+UTILS_NAME=utils
+UTILS_SOURCE=${UTILS_NAME}/${UTILS_NAME}.go
 HA_SS_NAME=ha_ss
 HA_SS_SOURCE=${HA_SS_NAME}/${HA_SS_NAME}.go
 AVIVA_NAME=aviva
@@ -51,7 +53,7 @@ ${BINDIR}/${HA_SS_NAME}-linux-arm64: ${HA_SS_SOURCE}
 
 # aviva
 #
-${BINDIR}/${AVIVA_NAME}: ${AVIVA_SOURCE}
+${BINDIR}/${AVIVA_NAME}: ${AVIVA_SOURCE} ${UTILS_SOURCE}
 	go build -o $@ $<
 
 # aviva my money
