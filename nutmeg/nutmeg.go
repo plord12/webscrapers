@@ -8,43 +8,16 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
-	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
-	stealth "github.com/jonfriesen/playwright-go-stealth"
 	"github.com/playwright-community/playwright-go"
+	"github.com/plord12/webscrapers/utils"
 )
-
-var page playwright.Page
-var pw *playwright.Playwright
-
-func finish() {
-	page.Close()
-
-	// on error, save video if we can
-	r := recover()
-	if r != nil {
-		log.Println("Failure:", r)
-		path, err := page.Video().Path()
-		if err == nil {
-			log.Printf("Final screen video saved at %s\n", path)
-		} else {
-			log.Printf("Failed to save final video: %v\n", err)
-		}
-	} else {
-		page.Video().Delete()
-	}
-
-	pw.Stop()
-}
 
 func main() {
 
@@ -111,46 +84,17 @@ func main() {
 
 	// clean from any previous run
 	//
-	if *otpCleanCommand != "" {
-		log.Printf("Running %s to clean old one time password\n", *otpCleanCommand)
-		command := strings.Split(*otpCleanCommand, " ")
-		exec.Command(command[0], command[1:]...).Run()
-	}
-	os.Remove(*otpPath)
+	utils.CleanOTP(otpCleanCommand, otpPath)
 
 	// setup
 	//
-	err := playwright.Install(&playwright.RunOptions{Browsers: []string{"chromium"}})
-	if err != nil {
-		panic(fmt.Sprintf("could not install playwright: %v", err))
-	}
-	pw, err = playwright.Run()
-	if err != nil {
-		panic(fmt.Sprintf("could not launch playwright: %v", err))
-	}
-	defer finish()
-	browser, err := pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{Headless: playwright.Bool(*headless)})
-	if err != nil {
-		panic(fmt.Sprintf("could not launch Chromium: %v", err))
-	}
-
-	const userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9"
-	page, err = browser.NewPage(playwright.BrowserNewPageOptions{RecordVideo: &playwright.RecordVideo{Dir: "videos/"}, UserAgent: playwright.String(userAgent)})
-	if err != nil {
-		panic(fmt.Sprintf("could not create page: %v", err))
-	}
-
-	// Inject stealth script
-	//
-	err = stealth.Inject(page)
-	if err != nil {
-		panic(fmt.Sprintf("could not inject stealth script: %v", err))
-	}
+	page := utils.StartChromium(headless)
+	defer utils.Finish(page)
 
 	// main page & login
 	//
 	log.Printf("Starting login\n")
-	_, err = page.Goto("https://authentication.nutmeg.com/login", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
+	_, err := page.Goto("https://authentication.nutmeg.com/login", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 	if err != nil {
 		panic(fmt.Sprintf("could not goto url: %v", err))
 	}
@@ -178,46 +122,11 @@ func main() {
 
 	// attempt to fetch one time password if needed
 	//
-	if *otpCommand != "" {
-		log.Printf("Running %s to get one time password\n", *otpCommand)
-		for i := 0; i < 30; i++ {
-			command := strings.Split(*otpCommand, " ")
-			cmd := exec.Command(command[0], command[1:]...)
-			err := cmd.Run()
-			if err != nil {
-				time.Sleep(2 * time.Second)
-			} else {
-				break
-			}
-		}
-	}
+	utils.FetchOTP(otpCommand)
 
 	// check/poll if otp/aviva exists ... could be via the above command or pushed here elsewhere
 	//
-	otp := ""
-	for i := 0; i < 30; i++ {
-		_, err := os.Stat(*otpPath)
-		if errors.Is(err, os.ErrNotExist) {
-			time.Sleep(2 * time.Second)
-		} else {
-			// read otp
-			//
-			data, err := os.ReadFile(*otpPath)
-			if err == nil {
-				r := regexp.MustCompile(".*([0-9][0-9][0-9][0-9][0-9][0-9]).*")
-				match := r.FindStringSubmatch(string(data))
-				if len(match) != 2 {
-					panic(fmt.Sprintf("could not parse one time password message: %v", err))
-				} else {
-					otp = match[1]
-				}
-			}
-			os.Remove(*otpPath)
-			break
-		}
-	}
-
-	os.Remove(*otpPath)
+	otp := utils.PollOTP(otpPath)
 
 	if otp != "" {
 		log.Println("otp=" + string(otp))

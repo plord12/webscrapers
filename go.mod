@@ -3,8 +3,6 @@ module github.com/plord12/webscrapers
 go 1.23.3
 
 require (
-	github.com/artdarek/go-unzip v1.0.0
-	github.com/cavaliergopher/grab/v3 v3.0.1
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-rod/rod v0.116.2
 	github.com/go-rod/stealth v0.4.9
@@ -15,8 +13,10 @@ require (
 )
 
 require (
+	github.com/artdarek/go-unzip v1.0.0 // indirect
 	github.com/bytedance/sonic v1.11.6 // indirect
 	github.com/bytedance/sonic/loader v0.1.1 // indirect
+	github.com/cavaliergopher/grab/v3 v3.0.1 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
 	github.com/deckarep/golang-set/v2 v2.6.0 // indirect

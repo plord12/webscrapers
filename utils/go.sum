@@ -12,6 +12,8 @@ github.com/go-jose/go-jose/v3 v3.0.3/go.mod h1:5b+7YgP7ZICgJDBdfjZaIt+H/9L9T/YQr
 github.com/go-stack/stack v1.8.1 h1:ntEHSVwIt7PNXNpgPmVfMrNhLtgjlmnZha2kOpuRiDw=
 github.com/go-stack/stack v1.8.1/go.mod h1:dcoOX6HbPZSZptuspn9bctJ+N/CnF5gGygcUP3XYfe4=
 github.com/google/go-cmp v0.5.9/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
+github.com/jonfriesen/playwright-go-stealth v0.0.1 h1:jjwEpQG4oCgCcFNeCN70G5Rtzc4vr9Zuu121lIYaH1w=
+github.com/jonfriesen/playwright-go-stealth v0.0.1/go.mod h1:genxteWiUTS6fdIQkPFBWtJ85BfA2YZW1OeS7BSX9Uo=
 github.com/mitchellh/go-ps v1.0.0 h1:i6ampVEEF4wQFF+bkYfwYgY+F/uYJDktmvLPf7qIgjc=
 github.com/mitchellh/go-ps v1.0.0/go.mod h1:J4lOc8z8yJs6vUwklHw2XEIiT4z4C40KtWVN3nvg8Pg=
 github.com/playwright-community/playwright-go v0.4802.0 h1:FSuvi5Pg/xp+n7vFpu2wGldwSQ3grsaDlHFRfHRQiy4=

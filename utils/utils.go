@@ -8,11 +8,16 @@ package utils
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path"
+	"regexp"
 	"runtime"
+	"strings"
+	"time"
 
 	"github.com/artdarek/go-unzip"
 	"github.com/cavaliergopher/grab/v3"
@@ -187,4 +192,59 @@ func StartChromium(headless *bool) playwright.Page {
 	}
 
 	return page
+}
+
+// clean up from any previous OTP
+func CleanOTP(otpCleanCommand *string, otpPath *string) {
+	if *otpCleanCommand != "" {
+		log.Printf("Running %s to clean old one time password\n", *otpCleanCommand)
+		command := strings.Split(*otpCleanCommand, " ")
+		exec.Command(command[0], command[1:]...).Run()
+	}
+	os.Remove(*otpPath)
+}
+
+// if enabled, run command to fetch OTP until it succeeds
+func FetchOTP(otpCommand *string) {
+	if *otpCommand != "" {
+		log.Printf("Running %s to get one time password\n", *otpCommand)
+		for i := 0; i < 30; i++ {
+			command := strings.Split(*otpCommand, " ")
+			cmd := exec.Command(command[0], command[1:]...)
+			err := cmd.Run()
+			if err != nil {
+				time.Sleep(2 * time.Second)
+			} else {
+				break
+			}
+		}
+	}
+}
+
+// poll for OTP locally
+func PollOTP(otpPath *string) string {
+	otp := ""
+	for i := 0; i < 30; i++ {
+		_, err := os.Stat(*otpPath)
+		if errors.Is(err, os.ErrNotExist) {
+			time.Sleep(2 * time.Second)
+		} else {
+			// read otp
+			//
+			data, err := os.ReadFile(*otpPath)
+			if err == nil {
+				r := regexp.MustCompile(".*([0-9][0-9][0-9][0-9][0-9][0-9]).*")
+				match := r.FindStringSubmatch(string(data))
+				if len(match) != 2 {
+					panic(fmt.Sprintf("could not parse one time password message: %v", err))
+				} else {
+					otp = match[1]
+				}
+			}
+			os.Remove(*otpPath)
+			break
+		}
+	}
+
+	return otp
 }

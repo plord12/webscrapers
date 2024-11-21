@@ -8,18 +8,14 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
-	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
-	utils "github.com/plord12/webscrapers/utils"
+	"github.com/plord12/webscrapers/utils"
 
 	"github.com/playwright-community/playwright-go"
 )
@@ -86,17 +82,14 @@ func main() {
 
 	// FIX THIS - validate
 
-	page := utils.StartCamoufox(headless)
-	defer utils.Finish(page)
-
 	// clean from any previous run
 	//
-	if *otpCleanCommand != "" {
-		log.Printf("Running %s to clean old one time password\n", *otpCleanCommand)
-		command := strings.Split(*otpCleanCommand, " ")
-		exec.Command(command[0], command[1:]...).Run()
-	}
-	os.Remove(*otpPath)
+	utils.CleanOTP(otpCleanCommand, otpPath)
+
+	// setup
+	//
+	page := utils.StartCamoufox(headless)
+	defer utils.Finish(page)
 
 	// main page & login
 	//
@@ -130,44 +123,11 @@ func main() {
 
 	// attempt to fetch one time password if needed
 	//
-	if *otpCommand != "" {
-		log.Printf("Running %s to get one time password\n", *otpCommand)
-		for i := 0; i < 30; i++ {
-			command := strings.Split(*otpCommand, " ")
-			cmd := exec.Command(command[0], command[1:]...)
-			err := cmd.Run()
-			if err != nil {
-				time.Sleep(2 * time.Second)
-			} else {
-				break
-			}
-		}
-	}
+	utils.FetchOTP(otpCommand)
 
 	// check/poll if otp/aviva exists ... could be via the above command or pushed here elsewhere
 	//
-	otp := ""
-	for i := 0; i < 30; i++ {
-		_, err := os.Stat(*otpPath)
-		if errors.Is(err, os.ErrNotExist) {
-			time.Sleep(2 * time.Second)
-		} else {
-			// read otp
-			//
-			data, err := os.ReadFile(*otpPath)
-			if err == nil {
-				r := regexp.MustCompile(".*([0-9][0-9][0-9][0-9][0-9][0-9]).*")
-				match := r.FindStringSubmatch(string(data))
-				if len(match) != 2 {
-					panic(fmt.Sprintf("could not parse one time password message: %v", err))
-				} else {
-					otp = match[1]
-				}
-			}
-			os.Remove(*otpPath)
-			break
-		}
-	}
+	otp := utils.PollOTP(otpPath)
 
 	if otp != "" {
 		log.Println("otp=" + string(otp))

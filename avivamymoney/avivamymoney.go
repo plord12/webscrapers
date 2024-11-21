@@ -15,32 +15,9 @@ import (
 	"strconv"
 	"strings"
 
-	stealth "github.com/jonfriesen/playwright-go-stealth"
 	"github.com/playwright-community/playwright-go"
+	"github.com/plord12/webscrapers/utils"
 )
-
-var page playwright.Page
-var pw *playwright.Playwright
-
-func finish() {
-	page.Close()
-
-	// on error, save video if we can
-	r := recover()
-	if r != nil {
-		log.Println("Failure:", r)
-		path, err := page.Video().Path()
-		if err == nil {
-			log.Printf("Final screen video saved at %s\n", path)
-		} else {
-			log.Printf("Failed to save final video: %v\n", err)
-		}
-	} else {
-		page.Video().Delete()
-	}
-
-	pw.Stop()
-}
 
 func main() {
 
@@ -95,35 +72,13 @@ func main() {
 
 	// setup
 	//
-	err := playwright.Install(&playwright.RunOptions{Browsers: []string{"chromium"}})
-	if err != nil {
-		panic(fmt.Sprintf("could not install playwright: %v", err))
-	}
-	pw, err = playwright.Run()
-	if err != nil {
-		panic(fmt.Sprintf("could not launch playwright: %v", err))
-	}
-	defer finish()
-	browser, err := pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{Headless: playwright.Bool(*headless)})
-	if err != nil {
-		panic(fmt.Sprintf("could not launch Chromium: %v", err))
-	}
-	page, err = browser.NewPage(playwright.BrowserNewPageOptions{RecordVideo: &playwright.RecordVideo{Dir: "videos/"}})
-	if err != nil {
-		panic(fmt.Sprintf("could not create page: %v", err))
-	}
-
-	// Inject stealth script
-	//
-	err = stealth.Inject(page)
-	if err != nil {
-		panic(fmt.Sprintf("could not inject stealth script: %v", err))
-	}
+	page := utils.StartCamoufox(headless)
+	defer utils.Finish(page)
 
 	// main page & login
 	//
 	log.Printf("Starting login\n")
-	_, err = page.Goto("https://www.avivamymoney.co.uk/Login", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
+	_, err := page.Goto("https://www.avivamymoney.co.uk/Login", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 	if err != nil {
 		panic(fmt.Sprintf("could not goto url: %v", err))
 	}
