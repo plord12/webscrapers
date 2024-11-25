@@ -188,10 +188,11 @@ mode: single
 
 The steps to install this addon are (currently) :
 
-1. Copy Dockerfile* *.yaml run.sh ha_ss-linux-arm64 to the home assistant /addons/ha_ss_addon directory
-2. Refresh addons on Home Assistant
-3. In the Addon Store, select the local screenshot tool addon and install
-4. In the new addon, build the image and start
+1. Build ha_ss-linux binaries for linux with `make bin/ha_ss-linux-arm64 bin/ha_ss-linux-amd64`
+2. Copy Dockerfile* *.yaml run.sh ha_ss-linux-* to the home assistant /addons/ha_ss_addon directory
+3. Refresh addons on Home Assistant
+4. In the Addon Store, select the local screenshot tool addon and install
+5. In the new addon, build the image and start
 
 configuration.yaml will need :
 

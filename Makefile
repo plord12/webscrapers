@@ -25,7 +25,7 @@ MYCAUSEUK_NAME=mycauseuk
 MYCAUSEUK_SOURCE=${MYCAUSEUK_NAME}/${MYCAUSEUK_NAME}.go
 
 BINDIR=bin
-BINARIES=${BINDIR}/${HA_SS_NAME} ${BINDIR}/${HA_SS_NAME}-linux-arm64
+BINARIES=${BINDIR}/${HA_SS_NAME} ${BINDIR}/${HA_SS_NAME}-linux-arm64 ${BINDIR}/${HA_SS_NAME}-linux-amd64
 BINARIES+=${BINDIR}/${AVIVA_NAME} 
 BINARIES+=${BINDIR}/${AVIVAMYMONEY_NAME} 
 BINARIES+=${BINDIR}/${NUTMEG_NAME} 
@@ -51,6 +51,9 @@ ${BINDIR}/${HA_SS_NAME}: ${HA_SS_SOURCE}
 ${BINDIR}/${HA_SS_NAME}-linux-arm64: ${HA_SS_SOURCE}
 	GOARCH=arm64 GOOS=linux go build -o $@ $<
 
+${BINDIR}/${HA_SS_NAME}-linux-amd64: ${HA_SS_SOURCE}
+	GOARCH=amd64 GOOS=linux go build -o $@ $<
+
 # aviva
 #
 ${BINDIR}/${AVIVA_NAME}: ${AVIVA_SOURCE} ${UTILS_SOURCE}
@@ -58,37 +61,37 @@ ${BINDIR}/${AVIVA_NAME}: ${AVIVA_SOURCE} ${UTILS_SOURCE}
 
 # aviva my money
 #
-${BINDIR}/${AVIVAMYMONEY_NAME}: ${AVIVAMYMONEY_SOURCE}
+${BINDIR}/${AVIVAMYMONEY_NAME}: ${AVIVAMYMONEY_SOURCE} ${UTILS_SOURCE}
 	go build -o $@ $<
 
 # nutmeg
 #
-${BINDIR}/${NUTMEG_NAME}: ${NUTMEG_SOURCE}
+${BINDIR}/${NUTMEG_NAME}: ${NUTMEG_SOURCE} ${UTILS_SOURCE}
 	go build -o $@ $<
 
 # fund
 #
-${BINDIR}/${FUND_NAME}: ${FUND_SOURCE}
+${BINDIR}/${FUND_NAME}: ${FUND_SOURCE} ${UTILS_SOURCE}
 	go build -o $@ $<
 
 # moneyfarm
 #
-${BINDIR}/${MONEYFARM_NAME}: ${MONEYFARM_SOURCE}
+${BINDIR}/${MONEYFARM_NAME}: ${MONEYFARM_SOURCE} ${UTILS_SOURCE}
 	go build -o $@ $<
 
 # moneyhub
 #
-${BINDIR}/${MONEYHUB_NAME}: ${MONEYHUB_SOURCE}
+${BINDIR}/${MONEYHUB_NAME}: ${MONEYHUB_SOURCE} ${UTILS_SOURCE}
 	go build -o $@ $<
 
 # octopus wheel
 #
-${BINDIR}/${OCTOPUSWHEEL_NAME}: ${OCTOPUSWHEEL_SOURCE}
+${BINDIR}/${OCTOPUSWHEEL_NAME}: ${OCTOPUSWHEEL_SOURCE} ${UTILS_SOURCE}
 	go build -o $@ $<
 
 # mycauseuk
 #
-${BINDIR}/${MYCAUSEUK_NAME}: ${MYCAUSEUK_SOURCE}
+${BINDIR}/${MYCAUSEUK_NAME}: ${MYCAUSEUK_SOURCE} ${UTILS_SOURCE}
 	go build -o $@ $<
 
 test: testha testaviva testavivamymoney testnutmeg testfund testmoneyfarm testmoneyhub testoctopuswheel
