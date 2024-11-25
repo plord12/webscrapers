@@ -28,6 +28,7 @@ RUN apt-get update && apt-get install -y \
     libcairo2 \
     libasound2  
 
-COPY ha_ss-linux-arm64 run.sh /
-RUN chmod a+x /ha_ss-linux-arm64 /run.sh
+COPY ha_ss-linux-amd64 /ha_ss
+COPY run.sh /
+RUN chmod a+x /ha_ss /run.sh
 CMD [ "/run.sh"  ]
