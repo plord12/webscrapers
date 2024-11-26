@@ -54,6 +54,11 @@ ${BINDIR}/${HA_SS_NAME}-linux-arm64: ${HA_SS_SOURCE}
 ${BINDIR}/${HA_SS_NAME}-linux-amd64: ${HA_SS_SOURCE}
 	GOARCH=amd64 GOOS=linux go build -o $@ $<
 
+release: ${BINDIR}/${HA_SS_NAME}-linux-arm64 ${BINDIR}/${HA_SS_NAME}-linux-amd64
+	cp $^ ha_ss_addon
+	zip ha_ss_addon.zip ha_ss_addon/Dockerfile* ha_ss_addon/*yaml ha_ss_addon/run.sh ha_ss_addon/${HA_SS_NAME}-linux-arm64  ha_ss_addon/${HA_SS_NAME}-linux-amd64
+	rm ha_ss_addon/${HA_SS_NAME}-linux-arm64  ha_ss_addon/${HA_SS_NAME}-linux-amd64
+	
 # aviva
 #
 ${BINDIR}/${AVIVA_NAME}: ${AVIVA_SOURCE} ${UTILS_SOURCE}
