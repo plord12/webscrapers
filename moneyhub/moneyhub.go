@@ -14,6 +14,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/playwright-community/playwright-go"
 	"github.com/plord12/webscrapers/utils"
@@ -27,7 +28,7 @@ func main() {
 	defaultUsername := ""
 	defaultPassword := ""
 	defaultAccount := ""
-	defaultBalance := 0.0
+	defaultBalance := "0.0"
 
 	var err error
 
@@ -44,10 +45,7 @@ func main() {
 		defaultAccount = envAccount
 	}
 	if envBalance := os.Getenv("MONEYHUB_BALANCE"); envBalance != "" {
-		defaultBalance, err = strconv.ParseFloat(envBalance, 32)
-		if err != nil {
-			log.Fatalf("could not conert balance: %v", err)
-		}
+		defaultBalance = envBalance
 	}
 
 	// arguments
@@ -57,7 +55,7 @@ func main() {
 	username := flag.String("username", defaultUsername, "Moneyhub username")
 	password := flag.String("password", defaultPassword, "Moneyhub password")
 	account := flag.String("account", defaultAccount, "Moneyhub account")
-	balance := flag.Float64("balance", defaultBalance, "Moneyhub balance for the account")
+	balance := flag.String("balance", defaultBalance, "Moneyhub balance for the account")
 
 	// usage
 	//
@@ -71,13 +69,20 @@ func main() {
 		fmt.Println("  $HEADLESS - Headless mode")
 		fmt.Println("  $MONEYHUB_USERNAME - Moneyhub username")
 		fmt.Println("  $MONEYHUB_PASSWORD - Moneyhub password")
-		fmt.Println("  $MONEYHUB_ACCOUNT - Moneyhub account")
-		fmt.Println("  $MONEYHUB_BALANCE - Moneyhub balance for the account")
+		fmt.Println("  $MONEYHUB_ACCOUNT - Moneyhub account(s)")
+		fmt.Println("  $MONEYHUB_BALANCE - Moneyhub balance(s) for the account")
 	}
 
 	// parse flags
 	//
 	flag.Parse()
+
+	accounts := strings.Split(*account, ",")
+	balances := strings.Split(*balance, ",")
+
+	if len(accounts) < 1 || len(balances) < 1 || len(accounts) != len(balances) {
+		panic("accounts and balances do not match")
+	}
 
 	// FIX THIS - validate
 
@@ -111,46 +116,47 @@ func main() {
 		panic(fmt.Sprintf("could not click: %v", err))
 	}
 
-	// goto assets & update
-	//
-	_, err = page.Goto("https://client.moneyhub.co.uk/#assets", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
-	if err != nil {
-		panic(fmt.Sprintf("could not goto assets: %v", err))
-	}
-	// occational "Stay Connected" pop-up
-	page.GetByText("Stay connected", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click(playwright.LocatorClickOptions{Timeout: playwright.Float(500.0)})
+	for i := 0; i < len(accounts); i++ {
+		// goto assets & update
+		//
+		_, err = page.Goto("https://client.moneyhub.co.uk/#assets", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
+		if err != nil {
+			panic(fmt.Sprintf("could not goto assets: %v", err))
+		}
+		// occational "Stay Connected" pop-up
+		page.GetByText("Stay connected", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click(playwright.LocatorClickOptions{Timeout: playwright.Float(500.0)})
 
-	// <div data-aid="ListItemTitle" class="sc-bxivhb list-item-title__Title-sc-uq1r70-0 bOSooI">Peter Moneyfarm ISA [ manual ]</div>
-	err = page.GetByText(*account, playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click(playwright.LocatorClickOptions{Delay: playwright.Float(500.0)})
-	if err != nil {
-		panic(fmt.Sprintf("could not goto asset: %v", err))
-	}
-	// <button label="appChrome.edit" data-aid="nav-bar-edit" aria-label="Edit Account" class="button__Button-sc-182rbpd-0 czyaZa"><div height="32px" width="32px" style="pointer-events: none;" aria-hidden="true"><div>...
-	err = page.Locator("[label=\"appChrome.edit\"]").Click()
-	if err != nil {
-		panic(fmt.Sprintf("could not edit asset: %v", err))
-	}
-	//<span class="sc-bxivhb sc-ifAKCX byYfdZ">Update valuation</span>
-	//<span class="sc-bxivhb sc-ifAKCX byYfdZ">Update balance</span>
-	err = page.GetByText(regexp.MustCompile("^Update ")).Click()
-	if err != nil {
-		panic(fmt.Sprintf("could not update asset: %v", err))
-	}
-	// <input name="balance" id="balance" type="text" inputmode="decimal" pattern="[0-9]*.?[0-9]*" autocomplete="off" class="sc-cSHVUG jVBxUm" value="92276.76">
-	err = page.Locator("#balance").Clear()
-	if err != nil {
-		panic(fmt.Sprintf("could not clear balance: %v", err))
-	}
-	err = page.Locator("#balance").Fill(fmt.Sprintf("%0.2f", *balance))
-	if err != nil {
-		panic(fmt.Sprintf("could not update balance: %v", err))
-	}
-	err = page.GetByText("Save", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click()
-	if err != nil {
-		panic(fmt.Sprintf("could not save balance: %v", err))
-	}
+		// <div data-aid="ListItemTitle" class="sc-bxivhb list-item-title__Title-sc-uq1r70-0 bOSooI">Peter Moneyfarm ISA [ manual ]</div>
+		err = page.GetByText(accounts[i], playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click(playwright.LocatorClickOptions{Delay: playwright.Float(500.0)})
+		if err != nil {
+			panic(fmt.Sprintf("could not goto asset: %v", err))
+		}
+		// <button label="appChrome.edit" data-aid="nav-bar-edit" aria-label="Edit Account" class="button__Button-sc-182rbpd-0 czyaZa"><div height="32px" width="32px" style="pointer-events: none;" aria-hidden="true"><div>...
+		err = page.Locator("[label=\"appChrome.edit\"]").Click()
+		if err != nil {
+			panic(fmt.Sprintf("could not edit asset: %v", err))
+		}
+		//<span class="sc-bxivhb sc-ifAKCX byYfdZ">Update valuation</span>
+		//<span class="sc-bxivhb sc-ifAKCX byYfdZ">Update balance</span>
+		err = page.GetByText(regexp.MustCompile("^Update ")).Click()
+		if err != nil {
+			panic(fmt.Sprintf("could not update asset: %v", err))
+		}
+		// <input name="balance" id="balance" type="text" inputmode="decimal" pattern="[0-9]*.?[0-9]*" autocomplete="off" class="sc-cSHVUG jVBxUm" value="92276.76">
+		err = page.Locator("#balance").Clear()
+		if err != nil {
+			panic(fmt.Sprintf("could not clear balance: %v", err))
+		}
+		err = page.Locator("#balance").Fill(balances[i])
+		if err != nil {
+			panic(fmt.Sprintf("could not update balance: %v", err))
+		}
+		err = page.GetByText("Save", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click()
+		if err != nil {
+			panic(fmt.Sprintf("could not save balance: %v", err))
+		}
 
-	log.Println("Account " + *account + " updated to " + fmt.Sprintf("%0.2f", *balance))
-
+		log.Println("Account " + *account + " updated to " + balances[i])
+	}
 	bufio.NewWriter(os.Stdout).Flush()
 }
