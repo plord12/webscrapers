@@ -156,7 +156,7 @@ func main() {
 			panic(fmt.Sprintf("could not save balance: %v", err))
 		}
 
-		log.Println("Account " + *account + " updated to " + balances[i])
+		log.Println("Account " + accounts[i] + " updated to " + balances[i])
 	}
 	bufio.NewWriter(os.Stdout).Flush()
 }
