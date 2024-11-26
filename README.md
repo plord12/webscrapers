@@ -148,6 +148,21 @@ Environment variables:
   $HA_URL - Home assistant page URL
 ```
 
+### Find CCS selector
+
+ha_ss requires a URL and CSS selector.  To determine these -
+
+1. use your browser to navigate to the home assistant page
+2. start development tools -
+  * Firefox use Tools -> Browser Tools -> Web Development Tools
+  * Chrome use View -> Developer -> Developer Tools
+3. Select pick an element (arrow on toolbar)
+4. Click on the area you want to screenshot
+5. Use the pop-up menu Copy -> CSS selector
+6. Note the page URL
+
+![browser](./css-select.png)
+
 ## [Home Assistant Screen Shot Addon](ha_ss_addon)
 
 Simple Home Assistant addon that hosts ha_ss as a REST server.  This enables automations to include charges with notifications

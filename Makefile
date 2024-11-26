@@ -56,7 +56,7 @@ ${BINDIR}/${HA_SS_NAME}-linux-amd64: ${HA_SS_SOURCE}
 
 release: ${BINDIR}/${HA_SS_NAME}-linux-arm64 ${BINDIR}/${HA_SS_NAME}-linux-amd64
 	cp $^ ha_ss_addon
-	zip ha_ss_addon.zip ha_ss_addon/Dockerfile* ha_ss_addon/*yaml ha_ss_addon/run.sh ha_ss_addon/${HA_SS_NAME}-linux-arm64  ha_ss_addon/${HA_SS_NAME}-linux-amd64
+	zip ha_ss_addon-v0.0.0-alpha.zip ha_ss_addon/Dockerfile* ha_ss_addon/*yaml ha_ss_addon/run.sh ha_ss_addon/${HA_SS_NAME}-linux-arm64  ha_ss_addon/${HA_SS_NAME}-linux-amd64
 	rm ha_ss_addon/${HA_SS_NAME}-linux-arm64  ha_ss_addon/${HA_SS_NAME}-linux-amd64
 	
 # aviva
