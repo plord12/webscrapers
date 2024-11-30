@@ -103,11 +103,12 @@ func installCamoufox() {
 		// darwin / arm64 - https://github.com/daijro/camoufox/releases/download/v132.0-beta.15/camoufox-132.0-beta.15-mac.arm64.zip
 		// linux / arm64 - https://github.com/daijro/camoufox/releases/download/v132.0-beta.15/camoufox-132.0-beta.15-lin.arm64.zip
 		//
-		// https://github.com/plord12/webscrapers/releases/download/v0.0.1-alpha/launch-linux-arm64-v0.0.0-alpha.tgz
+		// https://github.com/plord12/webscrapers/releases/download/v0.0.1-alpha/launch-darwin-arm64-v0.0.1-alpha.zip
 		//
-		log.Println("Installing camoufox from https://github.com/daijro/camoufox/releases/download/v" + camoufoxVer + "/" + camoufoxZipFilename)
+		url := "https://github.com/daijro/camoufox/releases/download/v" + camoufoxVer + "/" + camoufoxZipFilename
+		log.Println("Installing camoufox from " + url)
 		log.Println("Into " + browserDirectory)
-		_, err = grab.Get(browserDirectory, "https://github.com/daijro/camoufox/releases/download/v"+camoufoxVer+"/"+camoufoxZipFilename)
+		_, err = grab.Get(browserDirectory, url)
 		if err != nil {
 			panic(fmt.Sprintf("could not download camoufox: %v", err))
 		}
@@ -118,9 +119,10 @@ func installCamoufox() {
 		}
 		os.Remove(path.Join(browserDirectory, camoufoxZipFilename))
 
-		log.Println("Installing launch from https://github.com/plord12/webscrapers/releases/download/" + launchVer + "/" + launchZipFilename)
+		url = "https://github.com/plord12/webscrapers/releases/download/" + launchVer + "/" + launchZipFilename
+		log.Println("Installing launch from " + url)
 		log.Println("Into " + browserDirectory)
-		_, err = grab.Get(browserDirectory, "https://github.com/plord12/webscrapers/releases/download/"+launchVer+"/ "+launchZipFilename)
+		_, err = grab.Get(browserDirectory, url)
 		if err != nil {
 			panic(fmt.Sprintf("could not download launch: %v", err))
 		}
