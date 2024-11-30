@@ -116,47 +116,72 @@ func main() {
 		panic(fmt.Sprintf("could not click: %v", err))
 	}
 
+	var failed bool = false
+
 	for i := 0; i < len(accounts); i++ {
+
 		// goto assets & update
 		//
 		_, err = page.Goto("https://client.moneyhub.co.uk/#assets", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 		if err != nil {
-			panic(fmt.Sprintf("could not goto assets: %v", err))
+			log.Printf("could not goto assets: %v", err)
+			failed = true
+			continue
 		}
 		// occational "Stay Connected" pop-up
 		page.GetByText("Stay connected", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click(playwright.LocatorClickOptions{Timeout: playwright.Float(500.0)})
 
 		// <div data-aid="ListItemTitle" class="sc-bxivhb list-item-title__Title-sc-uq1r70-0 bOSooI">Peter Moneyfarm ISA [ manual ]</div>
-		err = page.GetByText(accounts[i], playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click(playwright.LocatorClickOptions{Delay: playwright.Float(500.0)})
+		err = page.GetByText(accounts[i], playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click()
 		if err != nil {
-			panic(fmt.Sprintf("could not goto asset: %v", err))
+			log.Printf("could not goto asset: %s %v", accounts[i], err)
+			failed = true
+			continue
 		}
 		// <button label="appChrome.edit" data-aid="nav-bar-edit" aria-label="Edit Account" class="button__Button-sc-182rbpd-0 czyaZa"><div height="32px" width="32px" style="pointer-events: none;" aria-hidden="true"><div>...
-		err = page.Locator("[label=\"appChrome.edit\"]").Click()
+		err = page.Locator("[label=\"appChrome.edit\"]").Click(playwright.LocatorClickOptions{Delay: playwright.Float(500.0)})
 		if err != nil {
-			panic(fmt.Sprintf("could not edit asset: %v", err))
+			log.Printf("could not edit asset: %s %v", accounts[i], err)
+			failed = true
+			continue
 		}
 		//<span class="sc-bxivhb sc-ifAKCX byYfdZ">Update valuation</span>
 		//<span class="sc-bxivhb sc-ifAKCX byYfdZ">Update balance</span>
 		err = page.GetByText(regexp.MustCompile("^Update ")).Click()
 		if err != nil {
-			panic(fmt.Sprintf("could not update asset: %v", err))
+			log.Printf("could not update asset: %s %v", accounts[i], err)
+			failed = true
+			continue
 		}
 		// <input name="balance" id="balance" type="text" inputmode="decimal" pattern="[0-9]*.?[0-9]*" autocomplete="off" class="sc-cSHVUG jVBxUm" value="92276.76">
 		err = page.Locator("#balance").Clear()
 		if err != nil {
-			panic(fmt.Sprintf("could not clear balance: %v", err))
+			log.Printf("could not clear balance: %s %v", accounts[i], err)
+			failed = true
+			continue
 		}
 		err = page.Locator("#balance").Fill(balances[i])
 		if err != nil {
-			panic(fmt.Sprintf("could not update balance: %v", err))
+			log.Printf("could not update balance: %s %v", accounts[i], err)
+			failed = true
+			continue
 		}
 		err = page.GetByText("Save", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click()
 		if err != nil {
-			panic(fmt.Sprintf("could not save balance: %v", err))
+			log.Printf("could not save balance: %s %v", accounts[i], err)
+			failed = true
+			continue
+		} else {
+			log.Println("Account " + accounts[i] + " updated to " + balances[i])
 		}
 
-		log.Println("Account " + accounts[i] + " updated to " + balances[i])
+		page.Reload()
+
 	}
+
+	if failed {
+		panic("One or more accounts couldn't be updated")
+	}
+
 	bufio.NewWriter(os.Stdout).Flush()
 }
