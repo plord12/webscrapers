@@ -116,7 +116,7 @@ func main() {
 		panic(fmt.Sprintf("could not get password: %v", err))
 	}
 	// <input id="loginButton" name="loginButton" class="a-button a-button--primary dd-data-link" data-dd-group="myAvivaLogin" data-dd-loc="login" data-dd-link="login" type="submit" value="Log in" data-qa-button="submitForm">
-	err = page.Locator("#loginButton").Click(playwright.LocatorClickOptions{Timeout: playwright.Float(60000.0)})
+	err = page.Locator("#loginButton").Click()
 	if err != nil {
 		panic(fmt.Sprintf("could not click: %v", err))
 	}
@@ -142,7 +142,7 @@ func main() {
 			panic(fmt.Sprintf("could not set otp: %v", err))
 		}
 
-		err = page.Locator("#VerifyMFA").Click(playwright.LocatorClickOptions{Timeout: playwright.Float(60000.0)})
+		err = page.Locator("#VerifyMFA").Click()
 		if err != nil {
 			panic(fmt.Sprintf("could not click otp: %v", err))
 		}
@@ -154,7 +154,7 @@ func main() {
 	//
 
 	// <a data-qa-button="Details" data-dd-link="Details" data-dd-loc="roundel" data-dd-group="myavivaHomePage" href="/MyPortfolio/ViewDetail?id=A3Acnhvs2bv17h0NKjx1t0s0fhGjFYRBO_3hxv9uIG41&amp;productCode=50010" class="button yellow dd-data-link">Details</a>
-	err = page.Locator("[data-qa-button=Details]").Click(playwright.LocatorClickOptions{Timeout: playwright.Float(60000.0)})
+	err = page.Locator("[data-qa-button=Details]").Click()
 	if err != nil {
 		panic(fmt.Sprintf("failed to click on details: %v", err))
 	}
