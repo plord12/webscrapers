@@ -25,13 +25,8 @@ import (
 	"github.com/playwright-community/playwright-go"
 )
 
-//go:embed launch
-var launchScript string
-
-//go:embed open
-var openScript string
-
-const camoufoxVer = "132.0-beta.15"
+const camoufoxVer = "132.0.2-beta.17"
+const launchVer = "v0.0.1-alpha"
 
 const userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9"
 
@@ -97,44 +92,45 @@ func installCamoufox() {
 			panic(fmt.Sprintf("could not create directory: %v", err))
 		}
 
-		var zipFilename string
+		var camoufoxZipFilename string
 		if runtime.GOOS == "darwin" {
-			zipFilename = "camoufox-" + camoufoxVer + "-mac." + runtime.GOARCH + ".zip"
+			camoufoxZipFilename = "camoufox-" + camoufoxVer + "-mac." + runtime.GOARCH + ".zip"
 		} else {
-			zipFilename = "camoufox-" + camoufoxVer + "-lin." + runtime.GOARCH + ".zip"
+			camoufoxZipFilename = "camoufox-" + camoufoxVer + "-lin." + runtime.GOARCH + ".zip"
 		}
+		launchZipFilename := "launch-" + runtime.GOOS + "-" + runtime.GOARCH + "-" + launchVer + ".zip"
 
 		// darwin / arm64 - https://github.com/daijro/camoufox/releases/download/v132.0-beta.15/camoufox-132.0-beta.15-mac.arm64.zip
 		// linux / arm64 - https://github.com/daijro/camoufox/releases/download/v132.0-beta.15/camoufox-132.0-beta.15-lin.arm64.zip
 		//
-
-		log.Println("Installing camoufox from https://github.com/daijro/camoufox/releases/download/v" + camoufoxVer + "/" + zipFilename)
+		// https://github.com/plord12/webscrapers/releases/download/v0.0.1-alpha/launch-linux-arm64-v0.0.0-alpha.tgz
+		//
+		log.Println("Installing camoufox from https://github.com/daijro/camoufox/releases/download/v" + camoufoxVer + "/" + camoufoxZipFilename)
 		log.Println("Into " + browserDirectory)
-
-		_, err = grab.Get(browserDirectory, "https://github.com/daijro/camoufox/releases/download/v"+camoufoxVer+"/"+zipFilename)
+		_, err = grab.Get(browserDirectory, "https://github.com/daijro/camoufox/releases/download/v"+camoufoxVer+"/"+camoufoxZipFilename)
 		if err != nil {
 			panic(fmt.Sprintf("could not download camoufox: %v", err))
 		}
-
-		uz := unzip.New(path.Join(browserDirectory, zipFilename), browserDirectory)
+		uz := unzip.New(path.Join(browserDirectory, camoufoxZipFilename), browserDirectory)
 		err = uz.Extract()
 		if err != nil {
 			panic(fmt.Sprintf("could not unzip camoufox: %v", err))
 		}
+		os.Remove(path.Join(browserDirectory, camoufoxZipFilename))
 
-		// patch mac
-		if runtime.GOOS == "darwin" {
-			err = os.Rename(path.Join(browserDirectory, "launch"), path.Join(browserDirectory, "launch-orig"))
-			if err != nil {
-				panic(fmt.Sprintf("could not rename launch: %v", err))
-			}
-			if err := os.WriteFile(path.Join(browserDirectory, "launch"), []byte(launchScript), 0755); err != nil {
-				panic(fmt.Sprintf("could not write new launch script: %v", err))
-			}
-			if err := os.WriteFile(path.Join(browserDirectory, "open"), []byte(openScript), 0755); err != nil {
-				panic(fmt.Sprintf("could not write new open script: %v", err))
-			}
+		log.Println("Installing launch from https://github.com/plord12/webscrapers/releases/download/" + launchVer + "/" + launchZipFilename)
+		log.Println("Into " + browserDirectory)
+		_, err = grab.Get(browserDirectory, "https://github.com/plord12/webscrapers/releases/download/"+launchVer+"/ "+launchZipFilename)
+		if err != nil {
+			panic(fmt.Sprintf("could not download launch: %v", err))
 		}
+		uz = unzip.New(path.Join(browserDirectory, launchZipFilename), browserDirectory)
+		err = uz.Extract()
+		if err != nil {
+			panic(fmt.Sprintf("could not unzip launch: %v", err))
+		}
+		os.Chmod(path.Join(browserDirectory, launchZipFilename), 0755)
+		os.Remove(path.Join(browserDirectory, launchZipFilename))
 	}
 }
 

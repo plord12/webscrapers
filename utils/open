@@ -1,6 +1,0 @@
-#!/bin/sh
-
-app=$2
-shift 2
-
-${app}/Contents/MacOS/camoufox $*

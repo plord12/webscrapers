@@ -25,8 +25,12 @@ go.work.sum
 .env
 
 bin
+bin-darwin-arm64
+bin-linux-amd64
+bin-linux-arm64
 build.sh
 env
 *.png
 !css-select.png
 copy.sh
+*.zip

@@ -1,6 +1,0 @@
-#!/bin/sh
-
-PATH=$(dirname $0):${PATH}
-export PATH
-
-launch-orig $* 

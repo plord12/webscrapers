@@ -3,6 +3,8 @@
 -include env
 export
 
+VERSION=v0.0.1-alpha
+
 UTILS_NAME=utils
 UTILS_SOURCE=${UTILS_NAME}/${UTILS_NAME}.go
 HA_SS_NAME=ha_ss
@@ -23,9 +25,14 @@ OCTOPUSWHEEL_NAME=octopuswheel
 OCTOPUSWHEEL_SOURCE=${OCTOPUSWHEEL_NAME}/${OCTOPUSWHEEL_NAME}.go
 MYCAUSEUK_NAME=mycauseuk
 MYCAUSEUK_SOURCE=${MYCAUSEUK_NAME}/${MYCAUSEUK_NAME}.go
+LAUNCH_NAME=launch
+LAUNCH_SOURCE=${LAUNCH_NAME}/constants.go ${LAUNCH_NAME}/exec.go ${LAUNCH_NAME}/load-addons.go ${LAUNCH_NAME}/main.go ${LAUNCH_NAME}/procgroup-unix.go ${LAUNCH_NAME}/procgroup-win.go ${LAUNCH_NAME}/validate.go ${LAUNCH_NAME}/xpi-dl.go
 
+# local local builds/tests
+#
 BINDIR=bin
-BINARIES=${BINDIR}/${HA_SS_NAME} ${BINDIR}/${HA_SS_NAME}-linux-arm64 ${BINDIR}/${HA_SS_NAME}-linux-amd64
+BINARIES=${BINDIR}/${HA_SS_NAME}
+BINARIES+=${BINDIR}/${LAUNCH_NAME} 
 BINARIES+=${BINDIR}/${AVIVA_NAME} 
 BINARIES+=${BINDIR}/${AVIVAMYMONEY_NAME} 
 BINARIES+=${BINDIR}/${NUTMEG_NAME} 
@@ -35,69 +42,156 @@ BINARIES+=${BINDIR}/${MONEYHUB_NAME}
 BINARIES+=${BINDIR}/${OCTOPUSWHEEL_NAME} 
 BINARIES+=${BINDIR}/${MYCAUSEUK_NAME} 
 
+LINUXARM64BINDIR=bin-linux-arm64
+LINUXAMD64BINDIR=bin-linux-amd64
+DARWINARM64BINDIR=bin-darwin-arm64
+
 all: ${BINDIR} ${BINARIES} otp
 
 ${BINDIR}:
 	mkdir -p ${BINDIR}
 
+${LINUXARM64BINDIR}:
+	mkdir -p ${LINUXARM64BINDIR}
+
 otp:
 	mkdir -p otp
+
+release: release-ha_ss_addon release-launch-linux-arm64 release-launch-linux-amd64 release-launch-darwin-arm64 release-webscrapers-linux-arm64 release-webscrapers-linux-amd64 release-webscrapers-darwin-arm64
+
+release-ha_ss_addon: ${LINUXARM64BINDIR}/${HA_SS_NAME}  ${LINUXAMD64BINDIR}/${HA_SS_NAME}
+	cp ${LINUXARM64BINDIR}/${HA_SS_NAME} ha_ss_addon/${HA_SS_NAME}-linux-arm64
+	cp ${LINUXAMD64BINDIR}/${HA_SS_NAME} ha_ss_addon/${HA_SS_NAME}-linux-amd64
+	zip ha_ss_addon-${VERSION}.zip ha_ss_addon/Dockerfile* ha_ss_addon/*yaml ha_ss_addon/run.sh ha_ss_addon/${HA_SS_NAME}-linux-arm64  ha_ss_addon/${HA_SS_NAME}-linux-amd64
+	rm ha_ss_addon/${HA_SS_NAME}-linux-arm64  ha_ss_addon/${HA_SS_NAME}-linux-amd64
+
+release-launch-linux-arm64: ${LINUXARM64BINDIR}/${LAUNCH_NAME}
+	cd ${LINUXARM64BINDIR} && zip ../launch-linux-arm64-${VERSION}.zip $(notdir $^)
+
+release-launch-linux-amd64: ${LINUXAMD64BINDIR}/${LAUNCH_NAME}
+	cd ${LINUXAMD64BINDIR} && zip ../launch-linux-amd64-${VERSION}.zip $(notdir $^)
+
+release-launch-darwin-arm64: ${DARWINARM64BINDIR}/${LAUNCH_NAME}
+	cd ${DARWINARM64BINDIR} && zip ../launch-darwin-arm64-${VERSION}.zip $(notdir $^)
+
+release-webscrapers-linux-arm64: ${LINUXARM64BINDIR}/${AVIVA_NAME} ${LINUXARM64BINDIR}/${AVIVAMYMONEY_NAME} ${LINUXARM64BINDIR}/${NUTMEG_NAME} ${LINUXARM64BINDIR}/${FUND_NAME} ${LINUXARM64BINDIR}/${MONEYFARM_NAME} ${LINUXARM64BINDIR}/${OCTOPUSWHEEL_NAME} ${LINUXARM64BINDIR}/${MYCAUSEUK_NAME}
+	cd ${LINUXARM64BINDIR} && zip ../webscrapers-linux-arm64-${VERSION}.zip $(notdir $^)
+
+release-webscrapers-linux-amd64: ${LINUXAMD64BINDIR}/${AVIVA_NAME} ${LINUXAMD64BINDIR}/${AVIVAMYMONEY_NAME} ${LINUXAMD64BINDIR}/${NUTMEG_NAME} ${LINUXAMD64BINDIR}/${FUND_NAME} ${LINUXAMD64BINDIR}/${MONEYFARM_NAME} ${LINUXAMD64BINDIR}/${OCTOPUSWHEEL_NAME} ${LINUXAMD64BINDIR}/${MYCAUSEUK_NAME}
+	cd ${LINUXAMD64BINDIR} && zip ../webscrapers-linux-amd64-${VERSION}.zip $(notdir $^)
+
+release-webscrapers-darwin-arm64: ${DARWINARM64BINDIR}/${AVIVA_NAME} ${DARWINARM64BINDIR}/${AVIVAMYMONEY_NAME} ${DARWINARM64BINDIR}/${NUTMEG_NAME} ${DARWINARM64BINDIR}/${FUND_NAME} ${DARWINARM64BINDIR}/${MONEYFARM_NAME} ${DARWINARM64BINDIR}/${OCTOPUSWHEEL_NAME} ${DARWINARM64BINDIR}/${MYCAUSEUK_NAME}
+	cd ${DARWINARM64BINDIR} && zip ../webscrapers-darwin-arm64-${VERSION}.zip $(notdir $^)
+
+# launcher
+#
+${BINDIR}/${LAUNCH_NAME}: ${LAUNCH_SOURCE}
+	cd ${LAUNCH_NAME} && go build -o ../$@
+${LINUXARM64BINDIR}/${LAUNCH_NAME}: ${LAUNCH_SOURCE}
+	cd ${LAUNCH_NAME} && GOARCH=arm64 GOOS=linux go build -o ../$@
+${LINUXAMD64BINDIR}/${LAUNCH_NAME}: ${LAUNCH_SOURCE}
+	cd ${LAUNCH_NAME} && GOARCH=amd64 GOOS=linux go build -o ../$@
+${DARWINARM64BINDIR}/${LAUNCH_NAME}: ${LAUNCH_SOURCE}
+	cd ${LAUNCH_NAME} && GOARCH=arm64 GOOS=darwin go build -o ../$@
 
 # home assistant screenshots
 #
 ${BINDIR}/${HA_SS_NAME}: ${HA_SS_SOURCE}
 	go build -o $@ $<
-
-${BINDIR}/${HA_SS_NAME}-linux-arm64: ${HA_SS_SOURCE}
+${LINUXARM64BINDIR}/${HA_SS_NAME}: ${HA_SS_SOURCE}
 	GOARCH=arm64 GOOS=linux go build -o $@ $<
-
-${BINDIR}/${HA_SS_NAME}-linux-amd64: ${HA_SS_SOURCE}
+${LINUXAMD64BINDIR}/${HA_SS_NAME}: ${HA_SS_SOURCE}
 	GOARCH=amd64 GOOS=linux go build -o $@ $<
+${DARWINARM64BINDIR}/${HA_SS_NAME}: ${HA_SS_SOURCE}
+	GOARCH=arm64 GOOS=darwin go build -o $@ $<
 
-release: ${BINDIR}/${HA_SS_NAME}-linux-arm64 ${BINDIR}/${HA_SS_NAME}-linux-amd64
-	cp $^ ha_ss_addon
-	zip ha_ss_addon-v0.0.0-alpha.zip ha_ss_addon/Dockerfile* ha_ss_addon/*yaml ha_ss_addon/run.sh ha_ss_addon/${HA_SS_NAME}-linux-arm64  ha_ss_addon/${HA_SS_NAME}-linux-amd64
-	rm ha_ss_addon/${HA_SS_NAME}-linux-arm64  ha_ss_addon/${HA_SS_NAME}-linux-amd64
-	
 # aviva
 #
 ${BINDIR}/${AVIVA_NAME}: ${AVIVA_SOURCE} ${UTILS_SOURCE}
 	go build -o $@ $<
+${LINUXARM64BINDIR}/${AVIVA_NAME}: ${AVIVA_SOURCE} ${UTILS_SOURCE}
+	GOARCH=arm64 GOOS=linux go build -o $@ $<
+${LINUXAMD64BINDIR}/${AVIVA_NAME}: ${AVIVA_SOURCE} ${UTILS_SOURCE}
+	GOARCH=amd64 GOOS=linux go build -o $@ $<
+${DARWINARM64BINDIR}/${AVIVA_NAME}: ${AVIVA_SOURCE} ${UTILS_SOURCE}
+	GOARCH=arm64 GOOS=darwin go build -o $@ $<
 
 # aviva my money
 #
 ${BINDIR}/${AVIVAMYMONEY_NAME}: ${AVIVAMYMONEY_SOURCE} ${UTILS_SOURCE}
 	go build -o $@ $<
+${LINUXARM64BINDIR}/${AVIVAMYMONEY_NAME}: ${AVIVAMYMONEY_SOURCE} ${UTILS_SOURCE}
+	GOARCH=arm64 GOOS=linux go build -o $@ $<
+${LINUXAMD64BINDIR}/${AVIVAMYMONEY_NAME}: ${AVIVAMYMONEY_SOURCE} ${UTILS_SOURCE}
+	GOARCH=amd64 GOOS=linux go build -o $@ $<
+${DARWINARM64BINDIR}/${AVIVAMYMONEY_NAME}: ${AVIVAMYMONEY_SOURCE} ${UTILS_SOURCE}
+	GOARCH=arm64 GOOS=darwin go build -o $@ $<
 
 # nutmeg
 #
 ${BINDIR}/${NUTMEG_NAME}: ${NUTMEG_SOURCE} ${UTILS_SOURCE}
 	go build -o $@ $<
+${LINUXARM64BINDIR}/${NUTMEG_NAME}: ${NUTMEG_SOURCE} ${UTILS_SOURCE}
+	GOARCH=arm64 GOOS=linux go build -o $@ $<
+${LINUXAMD64BINDIR}/${NUTMEG_NAME}: ${NUTMEG_SOURCE} ${UTILS_SOURCE}
+	GOARCH=amd64 GOOS=linux go build -o $@ $<
+${DARWINARM64BINDIR}/${NUTMEG_NAME}: ${NUTMEG_SOURCE} ${UTILS_SOURCE}
+	GOARCH=arm64 GOOS=darwin go build -o $@ $<
 
 # fund
 #
 ${BINDIR}/${FUND_NAME}: ${FUND_SOURCE} ${UTILS_SOURCE}
 	go build -o $@ $<
+${LINUXARM64BINDIR}/${FUND_NAME}: ${FUND_SOURCE} ${UTILS_SOURCE}
+	GOARCH=arm64 GOOS=linux go build -o $@ $<
+${LINUXAMD64BINDIR}/${FUND_NAME}: ${FUND_SOURCE} ${UTILS_SOURCE}
+	GOARCH=amd64 GOOS=linux go build -o $@ $<
+${DARWINARM64BINDIR}/${FUND_NAME}: ${FUND_SOURCE} ${UTILS_SOURCE}
+	GOARCH=arm64 GOOS=darwin go build -o $@ $<
 
 # moneyfarm
 #
 ${BINDIR}/${MONEYFARM_NAME}: ${MONEYFARM_SOURCE} ${UTILS_SOURCE}
 	go build -o $@ $<
+${LINUXARM64BINDIR}/${MONEYFARM_NAME}: ${MONEYFARM_SOURCE} ${UTILS_SOURCE}
+	GOARCH=arm64 GOOS=linux go build -o $@ $<
+${LINUXAMD64BINDIR}/${MONEYFARM_NAME}: ${MONEYFARM_SOURCE} ${UTILS_SOURCE}
+	GOARCH=amd64 GOOS=linux go build -o $@ $<
+${DARWINARM64BINDIR}/${MONEYFARM_NAME}: ${MONEYFARM_SOURCE} ${UTILS_SOURCE}
+	GOARCH=arm64 GOOS=darwin go build -o $@ $<
 
 # moneyhub
 #
 ${BINDIR}/${MONEYHUB_NAME}: ${MONEYHUB_SOURCE} ${UTILS_SOURCE}
 	go build -o $@ $<
+${LINUXARM64BINDIR}/${MONEYHUB_NAME}: ${MONEYHUB_SOURCE} ${UTILS_SOURCE}
+	GOARCH=arm64 GOOS=linux go build -o $@ $<
+${LINUXAMD64BINDIR}/${MONEYHUB_NAME}: ${MONEYHUB_SOURCE} ${UTILS_SOURCE}
+	GOARCH=amd64 GOOS=linux go build -o $@ $<
+${DARWINARM64BINDIR}/${MONEYHUB_NAME}: ${MONEYHUB_SOURCE} ${UTILS_SOURCE}
+	GOARCH=arm64 GOOS=darwin go build -o $@ $<
 
 # octopus wheel
 #
 ${BINDIR}/${OCTOPUSWHEEL_NAME}: ${OCTOPUSWHEEL_SOURCE} ${UTILS_SOURCE}
 	go build -o $@ $<
+${LINUXARM64BINDIR}/${OCTOPUSWHEEL_NAME}: ${OCTOPUSWHEEL_SOURCE} ${UTILS_SOURCE}
+	GOARCH=arm64 GOOS=linux go build -o $@ $<
+${LINUXAMD64BINDIR}/${OCTOPUSWHEEL_NAME}: ${OCTOPUSWHEEL_SOURCE} ${UTILS_SOURCE}
+	GOARCH=amd64 GOOS=linux go build -o $@ $<
+${DARWINARM64BINDIR}/${OCTOPUSWHEEL_NAME}: ${OCTOPUSWHEEL_SOURCE} ${UTILS_SOURCE}
+	GOARCH=arm64 GOOS=darwin go build -o $@ $<
 
 # mycauseuk
 #
 ${BINDIR}/${MYCAUSEUK_NAME}: ${MYCAUSEUK_SOURCE} ${UTILS_SOURCE}
 	go build -o $@ $<
+${LINUXARM64BINDIR}/${MYCAUSEUK_NAME}: ${MYCAUSEUK_SOURCE} ${UTILS_SOURCE}
+	GOARCH=arm64 GOOS=linux go build -o $@ $<
+${LINUXAMD64BINDIR}/${MYCAUSEUK_NAME}: ${MYCAUSEUK_SOURCE} ${UTILS_SOURCE}
+	GOARCH=amd64 GOOS=linux go build -o $@ $<
+${DARWINARM64BINDIR}/${MYCAUSEUK_NAME}: ${MYCAUSEUK_SOURCE} ${UTILS_SOURCE}
+	GOARCH=arm64 GOOS=darwin go build -o $@ $<
 
 test: testha testaviva testavivamymoney testnutmeg testfund testmoneyfarm testmoneyhub testoctopuswheel
 
@@ -155,5 +249,4 @@ testmycauseuk: ${BINDIR}/${MYCAUSEUK_NAME}
 
 clean:
 	@go clean
-	-@rm -rf ${BINDIR} test*.png 2>/dev/null || true
-
+	-@rm -rf ${BINDIR} ${LINUXARM64BINDIR} ${LINUXAMD64BINDIR} ${DARWINARM64BINDIR} test*.png *.zip 2>/dev/null || true
