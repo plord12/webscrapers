@@ -8,93 +8,51 @@ package main
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 	"strings"
 
+	"github.com/jessevdk/go-flags"
 	"github.com/plord12/webscrapers/utils"
 
 	"github.com/playwright-community/playwright-go"
 )
 
+type Options struct {
+	Headless        bool   `short:"e" long:"headless" description:"Headless mode" env:"HEADLESS"`
+	Username        string `short:"u" long:"username" description:"Aviva username" env:"AVIVA_USERNAME" required:"true"`
+	Password        string `short:"p" long:"password" description:"Aviva password" env:"AVIVA_PASSWORD" required:"true"`
+	Otppath         string `short:"o" long:"otppath" description:"Path to file containing one time password message" default:"otp/aviva" env:"OTP_PATH"`
+	Otpcommand      string `short:"c" long:"otpcommand" description:"Command to get one time password" env:"OTP_COMMAND"`
+	Otpcleancommand string `short:"l" long:"otpcleancommand" description:"Command to clean previous one time password" env:"OTP_CLEANCOMMAND"`
+}
+
+var options Options
+var parser = flags.NewParser(&options, flags.Default)
+
 func main() {
-
-	// defaults from environment
-	//
-	defaultHeadless := true
-	defaultUsername := ""
-	defaultPassword := ""
-	defaultOtpPath := "otp/aviva"
-	defaultOtpCleanCommand := ""
-	defaultOtpCommand := ""
-
-	if envHeadless := os.Getenv("HEADLESS"); envHeadless != "" {
-		defaultHeadless, _ = strconv.ParseBool(envHeadless)
-	}
-	if envUsername := os.Getenv("AVIVA_USERNAME"); envUsername != "" {
-		defaultUsername = envUsername
-	}
-	if envPassword := os.Getenv("AVIVA_PASSWORD"); envPassword != "" {
-		defaultPassword = envPassword
-	}
-	if envOtpPath := os.Getenv("OTP_PATH"); envOtpPath != "" {
-		defaultOtpPath = envOtpPath
-	}
-	if envOtpCleanCommand := os.Getenv("OTP_CLEANCOMMAND"); envOtpCleanCommand != "" {
-		defaultOtpCleanCommand = envOtpCleanCommand
-	}
-	if envOtpCommand := os.Getenv("OTP_COMMAND"); envOtpCommand != "" {
-		defaultOtpCommand = envOtpCommand
-	}
-
-	// arguments
-	//
-	headless := flag.Bool("headless", defaultHeadless, "Headless mode")
-	otpCleanCommand := flag.String("otpcleancommand", defaultOtpCleanCommand, "Command to clean previous one time password")
-	otpCommand := flag.String("otpcommand", defaultOtpCommand, "Command to get one time password")
-	otpPath := flag.String("otppath", defaultOtpPath, "Path to file containing one time password message")
-
-	username := flag.String("username", defaultUsername, "Aviva username")
-	password := flag.String("password", defaultPassword, "Aviva password")
-
-	// usage
-	//
-	flag.Usage = func() {
-		fmt.Println("Retrive Aviva balance via web scraping")
-		fmt.Println("\nUsage:")
-		fmt.Printf("  %s [options]\n", os.Args[0])
-		fmt.Println("\nOptions:")
-		flag.PrintDefaults()
-		fmt.Println("\nEnvironment variables:")
-		fmt.Println("  $HEADLESS - Headless mode")
-		fmt.Println("  $OTP_COMMAND - Command to get one time password")
-		fmt.Println("  $OTP_PATH - Path to file containing one time password message")
-		fmt.Println("  $AVIVA_USERNAME - Aviva username")
-		fmt.Println("  $AVIVA_PASSWORD - Aviva password")
-	}
 
 	// parse flags
 	//
-	flag.Parse()
-
-	// FIX THIS - validate
+	_, err := parser.Parse()
+	if err != nil {
+		os.Exit(0)
+	}
 
 	// clean from any previous run
 	//
-	utils.CleanOTP(otpCleanCommand, otpPath)
+	utils.CleanOTP(options.Otpcleancommand, options.Otpcleancommand)
 
 	// setup
 	//
-	page := utils.StartCamoufox(headless)
+	page := utils.StartCamoufox(options.Headless)
 	defer utils.Finish(page)
 
 	// main page & login
 	//
 	log.Printf("Starting login\n")
-	_, err := page.Goto("https://www.direct.aviva.co.uk/MyAccount/login", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
+	_, err = page.Goto("https://www.direct.aviva.co.uk/MyAccount/login", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 	if err != nil {
 		panic(fmt.Sprintf("could not goto url: %v", err))
 	}
@@ -106,12 +64,12 @@ func main() {
 
 	log.Printf("Logging in\n")
 	// <input aria-required="True" autocomplete="off" class="a-textbox" data-qa-textbox="username" data-val="true" data-val-required="Please enter your username" id="username" maxlength="50" name="username" type="text" value="">
-	err = page.Locator("#username").Fill(*username)
+	err = page.Locator("#username").Fill(options.Username)
 	if err != nil {
 		panic(fmt.Sprintf("could not get username: %v", err))
 	}
 	// <input aria-required="True" autocomplete="off" class="a-textbox" data-qa-textbox="password" data-val="true" data-val-required="Please enter your password" id="password" maxlength="300" name="password" type="password">
-	err = page.Locator("#password").Fill(*password)
+	err = page.Locator("#password").Fill(options.Password)
 	if err != nil {
 		panic(fmt.Sprintf("could not get password: %v", err))
 	}
@@ -128,11 +86,11 @@ func main() {
 
 	// attempt to fetch one time password if needed
 	//
-	utils.FetchOTP(otpCommand)
+	utils.FetchOTP(options.Otpcommand)
 
 	// check/poll if otp/aviva exists ... could be via the above command or pushed here elsewhere
 	//
-	otp := utils.PollOTP(otpPath)
+	otp := utils.PollOTP(options.Otppath)
 
 	if otp != "" {
 		log.Println("otp=" + string(otp))

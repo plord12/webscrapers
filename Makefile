@@ -196,56 +196,56 @@ ${DARWINARM64BINDIR}/${MYCAUSEUK_NAME}: ${MYCAUSEUK_SOURCE} ${UTILS_SOURCE}
 test: testha testaviva testavivamymoney testnutmeg testfund testmoneyfarm testmoneyhub testoctopuswheel
 
 testha: ${BINDIR}/${HA_SS_NAME}
-	${BINDIR}/${HA_SS_NAME} -help
-	${BINDIR}/${HA_SS_NAME} -username "$(HA_USERNAME)" -password "$(HA_PASSWORD)" -url "$(TEST1_HA_URL)" -css "$(TEST1_HA_CSS)" -path test1.png
-	${BINDIR}/${HA_SS_NAME} -username "$(HA_USERNAME)" -password "$(HA_PASSWORD)" -url "$(TEST2_HA_URL)" -css "$(TEST2_HA_CSS)" -path test2.png
-	${BINDIR}/${HA_SS_NAME} -username "$(HA_USERNAME)" -password "$(HA_PASSWORD)" -url "$(TEST3_HA_URL)" -css "$(TEST3_HA_CSS)" -path test3.png
+	${BINDIR}/${HA_SS_NAME} --help
+	${BINDIR}/${HA_SS_NAME} --username "$(HA_USERNAME)" --password "$(HA_PASSWORD)" --url "$(TEST1_HA_URL)" --css "$(TEST1_HA_CSS)" --path test1.png
+	${BINDIR}/${HA_SS_NAME} --username "$(HA_USERNAME)" --password "$(HA_PASSWORD)" --url "$(TEST2_HA_URL)" --css "$(TEST2_HA_CSS)" --path test2.png
+	${BINDIR}/${HA_SS_NAME} --username "$(HA_USERNAME)" --password "$(HA_PASSWORD)" --url "$(TEST3_HA_URL)" --css "$(TEST3_HA_CSS)" --path test3.png
 
 testrest:
-	${BINDIR}/${HA_SS_NAME} -username "$(HA_USERNAME)" -password "$(HA_PASSWORD)" -restport 3500
+	${BINDIR}/${HA_SS_NAME} --username "$(HA_USERNAME)" --password "$(HA_PASSWORD)" --restport 3500
 
 testaviva: ${BINDIR}/${AVIVA_NAME}
-	${BINDIR}/${AVIVA_NAME} -help
-	${BINDIR}/${AVIVA_NAME} -username "$(AVIVA_USERNAME)" -password "$(AVIVA_PASSWORD)" -otpcleancommand "$(AVIVA_OTPCLEANCOMMAND)"  -otpcommand "$(AVIVA_OTPCOMMAND)"
+	${BINDIR}/${AVIVA_NAME} --help
+	${BINDIR}/${AVIVA_NAME} --username "$(AVIVA_USERNAME)" --password "$(AVIVA_PASSWORD)" --otpcleancommand "$(AVIVA_OTPCLEANCOMMAND)"  --otpcommand "$(AVIVA_OTPCOMMAND)"
 
 testavivaselenium:
 	OTP_CLEANCOMMAND="$(AVIVA_OTPCLEANCOMMAND)" OTP_COMMAND="$(AVIVA_OTPCOMMAND)" python3 ${AVIVA_NAME}/${AVIVA_NAME}.py
 
 testavivamymoney: ${BINDIR}/${AVIVAMYMONEY_NAME}
-	${BINDIR}/${AVIVAMYMONEY_NAME} -help
-	${BINDIR}/${AVIVAMYMONEY_NAME} -username "$(AVIVAMYMONEY_USERNAME)" -password "$(AVIVAMYMONEY_PASSWORD)"  -word "$(AVIVAMYMONEY_WORD)"
+	${BINDIR}/${AVIVAMYMONEY_NAME} --help
+	${BINDIR}/${AVIVAMYMONEY_NAME} --username "$(AVIVAMYMONEY_USERNAME)" --password "$(AVIVAMYMONEY_PASSWORD)"  --word "$(AVIVAMYMONEY_WORD)"
 
 testavivamymoneyselenium:
 	python3 ${AVIVAMYMONEY_NAME}/${AVIVAMYMONEY_NAME}.py
 
 testnutmeg: ${BINDIR}/${NUTMEG_NAME}
-	${BINDIR}/${NUTMEG_NAME} -help
-	${BINDIR}/${NUTMEG_NAME} -username "$(TEST1_NUTMEG_USERNAME)" -password "$(TEST1_NUTMEG_PASSWORD)" -otpcleancommand "$(NUTMEG_OTPCLEANCOMMAND)" -otpcommand "$(NUTMEG_OTPCOMMAND)"
-	${BINDIR}/${NUTMEG_NAME} -username "$(TEST2_NUTMEG_USERNAME)" -password "$(TEST2_NUTMEG_PASSWORD)" -otpcleancommand "$(NUTMEG_OTPCLEANCOMMAND)" -otpcommand "$(NUTMEG_OTPCOMMAND)"
+	${BINDIR}/${NUTMEG_NAME} --help
+	${BINDIR}/${NUTMEG_NAME} --username "$(TEST1_NUTMEG_USERNAME)" --password "$(TEST1_NUTMEG_PASSWORD)" --otpcleancommand "$(NUTMEG_OTPCLEANCOMMAND)" --otpcommand "$(NUTMEG_OTPCOMMAND)"
+	${BINDIR}/${NUTMEG_NAME} --username "$(TEST2_NUTMEG_USERNAME)" --password "$(TEST2_NUTMEG_PASSWORD)" --otpcleancommand "$(NUTMEG_OTPCLEANCOMMAND)" --otpcommand "$(NUTMEG_OTPCOMMAND)"
 
 testfund: ${BINDIR}/${FUND_NAME}
-	${BINDIR}/${FUND_NAME} -help
-	${BINDIR}/${FUND_NAME} -fund "$(TEST1_FUND)"
-	${BINDIR}/${FUND_NAME} -fund "$(TEST2_FUND)"
-	${BINDIR}/${FUND_NAME} -fund "$(TEST3_FUND)"
+	${BINDIR}/${FUND_NAME} --help
+	${BINDIR}/${FUND_NAME} --fund "$(TEST1_FUND)"
+	${BINDIR}/${FUND_NAME} --fund "$(TEST2_FUND)"
+	${BINDIR}/${FUND_NAME} --fund "$(TEST3_FUND)"
 
 testmoneyfarm: ${BINDIR}/${MONEYFARM_NAME}
-	${BINDIR}/${MONEYFARM_NAME} -help
-	${BINDIR}/${MONEYFARM_NAME} -username "$(TEST1_MONEYFARM_USERNAME)" -password "$(TEST1_MONEYFARM_PASSWORD)" -otpcleancommand "$(MONEYFARM_OTPCLEANCOMMAND)" -otpcommand "$(MONEYFARM_OTPCOMMAND)"
-	${BINDIR}/${MONEYFARM_NAME} -username "$(TEST2_MONEYFARM_USERNAME)" -password "$(TEST2_MONEYFARM_PASSWORD)" -otpcleancommand "$(MONEYFARM_OTPCLEANCOMMAND)" -otpcommand "$(MONEYFARM_OTPCOMMAND)"
+	${BINDIR}/${MONEYFARM_NAME} --help
+	${BINDIR}/${MONEYFARM_NAME} --username "$(TEST1_MONEYFARM_USERNAME)" --password "$(TEST1_MONEYFARM_PASSWORD)" --otpcleancommand "$(MONEYFARM_OTPCLEANCOMMAND)" --otpcommand "$(MONEYFARM_OTPCOMMAND)"
+	${BINDIR}/${MONEYFARM_NAME} --username "$(TEST2_MONEYFARM_USERNAME)" --password "$(TEST2_MONEYFARM_PASSWORD)" --otpcleancommand "$(MONEYFARM_OTPCLEANCOMMAND)" --otpcommand "$(MONEYFARM_OTPCOMMAND)"
 
 testmoneyhub: ${BINDIR}/${MONEYHUB_NAME}
-	${BINDIR}/${MONEYHUB_NAME} -help
-	MONEYHUB_BALANCE=$(shell ${BINDIR}/${NUTMEG_NAME} -username "$(TEST1_NUTMEG_USERNAME)" -password "$(TEST1_NUTMEG_PASSWORD)" -otpcleancommand "$(NUTMEG_OTPCLEANCOMMAND)" -otpcommand "$(NUTMEG_OTPCOMMAND)"   -headless=false); \
-	${BINDIR}/${MONEYHUB_NAME} -username "$(TEST1_MONEYHUB_USERNAME)" -password "$(TEST1_MONEYHUB_PASSWORD)" -account "$(TEST1_MONEYHUB_ACCOUNT),$(TEST1_MONEYHUB_ACCOUNT),$(TEST1_MONEYHUB_ACCOUNT),$(TEST1_MONEYHUB_ACCOUNT),$(TEST1_MONEYHUB_ACCOUNT)" -balance $$MONEYHUB_BALANCE,$$MONEYHUB_BALANCE,$$MONEYHUB_BALANCE,$$MONEYHUB_BALANCE,$$MONEYHUB_BALANCE
+	${BINDIR}/${MONEYHUB_NAME} --help
+	MONEYHUB_BALANCE=$(shell ${BINDIR}/${NUTMEG_NAME} --username "$(TEST1_NUTMEG_USERNAME)" --password "$(TEST1_NUTMEG_PASSWORD)" --otpcleancommand "$(NUTMEG_OTPCLEANCOMMAND)" --otpcommand "$(NUTMEG_OTPCOMMAND)"); \
+	${BINDIR}/${MONEYHUB_NAME} --username "$(TEST1_MONEYHUB_USERNAME)" --password "$(TEST1_MONEYHUB_PASSWORD)" --account "$(TEST1_MONEYHUB_ACCOUNT)" --account "$(TEST1_MONEYHUB_ACCOUNT)" --account "$(TEST1_MONEYHUB_ACCOUNT)" --account "$(TEST1_MONEYHUB_ACCOUNT)" --account "$(TEST1_MONEYHUB_ACCOUNT)" --balance $$MONEYHUB_BALANCE --balance $$MONEYHUB_BALANCE --balance $$MONEYHUB_BALANCE --balance $$MONEYHUB_BALANCE --balance $$MONEYHUB_BALANCE
 
 testoctopuswheel: ${BINDIR}/${OCTOPUSWHEEL_NAME}
-	${BINDIR}/${OCTOPUSWHEEL_NAME} -help
-	${BINDIR}/${OCTOPUSWHEEL_NAME} -username "$(TEST1_OCTOPUS_USERNAME)" -password "$(TEST1_OCTOPUS_PASSWORD)"
+	${BINDIR}/${OCTOPUSWHEEL_NAME} --help
+	${BINDIR}/${OCTOPUSWHEEL_NAME} --username "$(TEST1_OCTOPUS_USERNAME)" --password "$(TEST1_OCTOPUS_PASSWORD)"
 
 testmycauseuk: ${BINDIR}/${MYCAUSEUK_NAME}
-	${BINDIR}/${MYCAUSEUK_NAME} -help
-	${BINDIR}/${MYCAUSEUK_NAME} -username "$(TEST1_MYCAUSEUK_USERNAME)" -password "$(TEST1_MYCAUSEUK_PASSWORD)"
+	${BINDIR}/${MYCAUSEUK_NAME} --help
+	${BINDIR}/${MYCAUSEUK_NAME} --username "$(TEST1_MYCAUSEUK_USERNAME)" --password "$(TEST1_MYCAUSEUK_PASSWORD)"
 
 clean:
 	@go clean

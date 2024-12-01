@@ -8,81 +8,53 @@ package main
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 	"strings"
 
+	"github.com/jessevdk/go-flags"
 	"github.com/playwright-community/playwright-go"
 	"github.com/plord12/webscrapers/utils"
 )
 
+type Options struct {
+	Headless bool   `short:"e" long:"headless" description:"Headless mode" env:"HEADLESS"`
+	Username string `short:"u" long:"username" description:"Octopus username" env:"OCTOPUS_USERNAME" required:"true"`
+	Password string `short:"p" long:"password" description:"Octopus password" env:"OCTOPUS_PASSWORD" required:"true"`
+}
+
+var options Options
+var parser = flags.NewParser(&options, flags.Default)
+
 func main() {
-
-	// defaults from environment
-	//
-	defaultHeadless := true
-	defaultUsername := ""
-	defaultPassword := ""
-
-	if envHeadless := os.Getenv("HEADLESS"); envHeadless != "" {
-		defaultHeadless, _ = strconv.ParseBool(envHeadless)
-	}
-	if envUsername := os.Getenv("OCTOPUS_USERNAME"); envUsername != "" {
-		defaultUsername = envUsername
-	}
-	if envPassword := os.Getenv("OCTOPUS_PASSWORD"); envPassword != "" {
-		defaultPassword = envPassword
-	}
-
-	// arguments
-	//
-	headless := flag.Bool("headless", defaultHeadless, "Headless mode")
-
-	username := flag.String("username", defaultUsername, "Octopus username")
-	password := flag.String("password", defaultPassword, "Octopus password")
-
-	// usage
-	//
-	flag.Usage = func() {
-		fmt.Println("Spin octopus wheel of fortune via web scraping")
-		fmt.Println("\nUsage:")
-		fmt.Printf("  %s [options]\n", os.Args[0])
-		fmt.Println("\nOptions:")
-		flag.PrintDefaults()
-		fmt.Println("\nEnvironment variables:")
-		fmt.Println("  $HEADLESS - Headless mode")
-		fmt.Println("  $OCTOPUS_USERNAME - Octopus username")
-		fmt.Println("  $OCTOPUS_PASSWORD - Octopus password")
-	}
 
 	// parse flags
 	//
-	flag.Parse()
-
-	// FIX THIS - validate
+	_, err := parser.Parse()
+	if err != nil {
+		os.Exit(0)
+	}
 
 	// setup
 	//
-	page := utils.StartChromium(headless)
+	page := utils.StartChromium(options.Headless)
 	defer utils.Finish(page)
 
 	// main page & login
 	//
 	log.Printf("Starting login\n")
-	_, err := page.Goto("https://octopus.energy/login/", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
+	_, err = page.Goto("https://octopus.energy/login/", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 	if err != nil {
 		panic(fmt.Sprintf("could not goto url: %v", err))
 	}
 
 	log.Printf("Logging in\n")
-	err = page.Locator("#id_username").Fill(*username)
+	err = page.Locator("#id_username").Fill(options.Username)
 	if err != nil {
 		panic(fmt.Sprintf("could not get username: %v", err))
 	}
-	err = page.Locator("#id_password").Fill(*password)
+	err = page.Locator("#id_password").Fill(options.Password)
 	if err != nil {
 		panic(fmt.Sprintf("could not get password: %v", err))
 	}

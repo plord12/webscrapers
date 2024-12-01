@@ -137,7 +137,7 @@ func installCamoufox() {
 }
 
 // Start webscraping with Camoufo
-func StartCamoufox(headless *bool) playwright.Page {
+func StartCamoufox(headless bool) playwright.Page {
 
 	installCamoufox()
 
@@ -149,7 +149,7 @@ func StartCamoufox(headless *bool) playwright.Page {
 	if err != nil {
 		panic(fmt.Sprintf("could not launch playwright: %v", err))
 	}
-	browser, err := pw.Firefox.Launch(playwright.BrowserTypeLaunchOptions{Headless: playwright.Bool(*headless), ExecutablePath: playwright.String(path.Join(registryDirectory(), "camoufox-"+camoufoxVer, "launch"))})
+	browser, err := pw.Firefox.Launch(playwright.BrowserTypeLaunchOptions{Headless: playwright.Bool(headless), ExecutablePath: playwright.String(path.Join(registryDirectory(), "camoufox-"+camoufoxVer, "launch"))})
 	if err != nil {
 		panic(fmt.Sprintf("could not launch Camoufox: %v", err))
 	}
@@ -162,7 +162,7 @@ func StartCamoufox(headless *bool) playwright.Page {
 }
 
 // Start webscraping with Chromium + stealth
-func StartChromium(headless *bool) playwright.Page {
+func StartChromium(headless bool) playwright.Page {
 
 	err := playwright.Install(&playwright.RunOptions{Browsers: []string{"chromium"}})
 	if err != nil {
@@ -172,7 +172,7 @@ func StartChromium(headless *bool) playwright.Page {
 	if err != nil {
 		panic(fmt.Sprintf("could not launch playwright: %v", err))
 	}
-	browser, err := pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{Headless: playwright.Bool(*headless)})
+	browser, err := pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{Headless: playwright.Bool(headless)})
 	if err != nil {
 		panic(fmt.Sprintf("could not launch Chromium: %v", err))
 	}
@@ -193,21 +193,21 @@ func StartChromium(headless *bool) playwright.Page {
 }
 
 // clean up from any previous OTP
-func CleanOTP(otpCleanCommand *string, otpPath *string) {
-	if *otpCleanCommand != "" {
-		log.Printf("Running %s to clean old one time password\n", *otpCleanCommand)
-		command := strings.Split(*otpCleanCommand, " ")
+func CleanOTP(otpCleanCommand string, otpPath string) {
+	if otpCleanCommand != "" {
+		log.Printf("Running %s to clean old one time password\n", otpCleanCommand)
+		command := strings.Split(otpCleanCommand, " ")
 		exec.Command(command[0], command[1:]...).Run()
 	}
-	os.Remove(*otpPath)
+	os.Remove(otpPath)
 }
 
 // if enabled, run command to fetch OTP until it succeeds
-func FetchOTP(otpCommand *string) {
-	if *otpCommand != "" {
-		log.Printf("Running %s to get one time password\n", *otpCommand)
+func FetchOTP(otpCommand string) {
+	if otpCommand != "" {
+		log.Printf("Running %s to get one time password\n", otpCommand)
 		for i := 0; i < 30; i++ {
-			command := strings.Split(*otpCommand, " ")
+			command := strings.Split(otpCommand, " ")
 			cmd := exec.Command(command[0], command[1:]...)
 			err := cmd.Run()
 			if err != nil {
@@ -220,16 +220,16 @@ func FetchOTP(otpCommand *string) {
 }
 
 // poll for OTP locally
-func PollOTP(otpPath *string) string {
+func PollOTP(otpPath string) string {
 	otp := ""
 	for i := 0; i < 30; i++ {
-		_, err := os.Stat(*otpPath)
+		_, err := os.Stat(otpPath)
 		if errors.Is(err, os.ErrNotExist) {
 			time.Sleep(2 * time.Second)
 		} else {
 			// read otp
 			//
-			data, err := os.ReadFile(*otpPath)
+			data, err := os.ReadFile(otpPath)
 			if err == nil {
 				r := regexp.MustCompile(".*([0-9][0-9][0-9][0-9][0-9][0-9]).*")
 				match := r.FindStringSubmatch(string(data))
@@ -239,7 +239,7 @@ func PollOTP(otpPath *string) string {
 					otp = match[1]
 				}
 			}
-			os.Remove(*otpPath)
+			os.Remove(otpPath)
 			break
 		}
 	}

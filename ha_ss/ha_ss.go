@@ -13,7 +13,6 @@ package main
 
 import (
 	"bytes"
-	"flag"
 	"fmt"
 	"image"
 	"image/png"
@@ -25,8 +24,22 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
+	"github.com/jessevdk/go-flags"
 	"github.com/playwright-community/playwright-go"
 )
+
+type Options struct {
+	Headless bool   `short:"e" long:"headless" description:"Headless mode" env:"HEADLESS"`
+	Username string `short:"u" long:"username" description:"Home assistant username" env:"HA_USERNAME" required:"true"`
+	Password string `short:"p" long:"password" description:"Home assistant password" env:"HA_PASSWORD" required:"true"`
+	Restport int    `short:"r" long:"restport" description:"If set, startup REST server at given port" env:"HA_RESTPORT"`
+	Url      string `short:"l" long:"url" description:"Home assistant page URL" env:"HA_URL"`
+	Css      string `short:"c" long:"css" description:"Home assistant CSS selector" env:"HA_CSS"`
+	Path     string `short:"a" long:"path" description:"Output screenshot path" env:"HA_PATH" default:"output.png"`
+}
+
+var options Options
+var parser = flags.NewParser(&options, flags.Default)
 
 type request struct {
 	Url      string `json:"url"`
@@ -34,89 +47,28 @@ type request struct {
 	Filename string `json:"filename"`
 }
 
-var headless *bool
-var username *string
-var password *string
-
 func main() {
-
-	// defaults from environment
-	//
-	defaultHeadless := true
-	defaultRestPort := int(0)
-	defaultUsername := ""
-	defaultPassword := ""
-	defaultUrl := ""
-	defaultCss := ""
-	defaultPath := "output.png"
-
-	if envHeadless := os.Getenv("HEADLESS"); envHeadless != "" {
-		defaultHeadless, _ = strconv.ParseBool(envHeadless)
-	}
-	if envRestPort := os.Getenv("HA_RESTPORT"); envRestPort != "" {
-		defaultRestPort, _ = strconv.Atoi(envRestPort)
-	}
-	if envUsername := os.Getenv("HA_USERNAME"); envUsername != "" {
-		defaultUsername = envUsername
-	}
-	if envPassword := os.Getenv("HA_PASSWORD"); envPassword != "" {
-		defaultPassword = envPassword
-	}
-	if envUrl := os.Getenv("HA_URL"); envUrl != "" {
-		defaultUrl = envUrl
-	}
-	if envCss := os.Getenv("HA_CSS"); envCss != "" {
-		defaultCss = envCss
-	}
-	if envPath := os.Getenv("HA_PATH"); envPath != "" {
-		defaultPath = envPath
-	}
-
-	// arguments
-	//
-	headless = flag.Bool("headless", defaultHeadless, "Headless mode")
-	username = flag.String("username", defaultUsername, "Home assistant username")
-	password = flag.String("password", defaultPassword, "Home assistant password")
-
-	restport := flag.Int("restport", defaultRestPort, "If set, startup REST server at given port")
-	url := flag.String("url", defaultUrl, "Home assistant page URL")
-	css := flag.String("css", defaultCss, "Home assistant CSS selector")
-	path := flag.String("path", defaultPath, "Output screenshot path")
-
-	// usage
-	//
-	flag.Usage = func() {
-		fmt.Println("Connect to Home Assistant and take a screenshot by CSS selector")
-		fmt.Println("\nUsage:")
-		fmt.Printf("  %s [options]\n", os.Args[0])
-		fmt.Println("\nOptions:")
-		flag.PrintDefaults()
-		fmt.Println("\nEnvironment variables:")
-		fmt.Println("  $HEADLESS - Headless mode")
-		fmt.Println("  $HA_CSS - Home assistant CSS selector")
-		fmt.Println("  $HA_PATH - Output screenshot path")
-		fmt.Println("  $HA_USERNAME - Home assistant username")
-		fmt.Println("  $HA_PASSWORD - Home assistant password")
-		fmt.Println("  $HA_RESTPORT - If set, startup REST server at given port")
-		fmt.Println("  $HA_URL - Home assistant page URL")
-	}
 
 	// parse flags
 	//
-	flag.Parse()
+	_, err := parser.Parse()
+	if err != nil {
+		os.Exit(0)
+	}
 
-	// FIX THIS - validate
-
-	if *restport != 0 {
+	if options.Restport != 0 {
 		// need to start REST server
 		//
 		restServer := gin.Default()
 		restServer.POST("", restScreenshot)
-		restServer.Run(":" + strconv.Itoa(*restport))
+		restServer.Run(":" + strconv.Itoa(options.Restport))
 	} else {
+		if options.Url == "" || options.Css == "" || options.Path == "" {
+			log.Fatal("url, css and path options must be provided when not running as a REST server")
+		}
 		// one-off run
 		//
-		err := screenshot(*headless, *username, *password, *url, *css, *path)
+		err := screenshot(options.Headless, options.Username, options.Password, options.Url, options.Css, options.Path)
 		if err != nil {
 			log.Fatal(err.Error())
 		}
@@ -206,7 +158,7 @@ func restScreenshot(c *gin.Context) {
 
 	log.Printf("url=%s css=%s filename=%s\n", thisRequest.Url, thisRequest.Css, thisRequest.Filename)
 
-	err := screenshot(*headless, *username, *password, thisRequest.Url, thisRequest.Css, thisRequest.Filename)
+	err := screenshot(options.Headless, options.Username, options.Password, thisRequest.Url, thisRequest.Css, thisRequest.Filename)
 	if err != nil {
 		c.Data(http.StatusNotFound, binding.MIMEPlain, []byte(err.Error()))
 	}

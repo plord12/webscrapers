@@ -8,82 +8,54 @@ package main
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 
+	"github.com/jessevdk/go-flags"
 	"github.com/playwright-community/playwright-go"
 	"github.com/plord12/webscrapers/utils"
 )
 
+type Options struct {
+	Headless bool   `short:"e" long:"headless" description:"Headless mode" env:"HEADLESS"`
+	Username string `short:"u" long:"username" description:"My cause uk username" env:"MYCAUSEUK_USERNAME" required:"true"`
+	Password string `short:"p" long:"password" description:"My cause uk password" env:"MYCAUSEUK_PASSWORD" required:"true"`
+}
+
+var options Options
+var parser = flags.NewParser(&options, flags.Default)
+
 func main() {
-
-	// defaults from environment
-	//
-	defaultHeadless := true
-	defaultUsername := ""
-	defaultPassword := ""
-
-	if envHeadless := os.Getenv("HEADLESS"); envHeadless != "" {
-		defaultHeadless, _ = strconv.ParseBool(envHeadless)
-	}
-	if envUsername := os.Getenv("MYCAUSEUK_USERNAME"); envUsername != "" {
-		defaultUsername = envUsername
-	}
-	if envPassword := os.Getenv("MYCAUSEUK_PASSWORD"); envPassword != "" {
-		defaultPassword = envPassword
-	}
-
-	// arguments
-	//
-	headless := flag.Bool("headless", defaultHeadless, "Headless mode")
-
-	username := flag.String("username", defaultUsername, "My cause uk username")
-	password := flag.String("password", defaultPassword, "My cause uk password")
-
-	// usage
-	//
-	flag.Usage = func() {
-		fmt.Println("Retrive mycause uk events via web scraping")
-		fmt.Println("\nUsage:")
-		fmt.Printf("  %s [options]\n", os.Args[0])
-		fmt.Println("\nOptions:")
-		flag.PrintDefaults()
-		fmt.Println("\nEnvironment variables:")
-		fmt.Println("  $HEADLESS - Headless mode")
-		fmt.Println("  $MYCAUSEUK_USERNAME - My cause uk username")
-		fmt.Println("  $MYCAUSEUK_PASSWORD - My cause uk password")
-	}
 
 	// parse flags
 	//
-	flag.Parse()
-
-	// FIX THIS - validate
+	_, err := parser.Parse()
+	if err != nil {
+		os.Exit(0)
+	}
 
 	// setup
 	//
-	page := utils.StartChromium(headless)
+	page := utils.StartChromium(options.Headless)
 	defer utils.Finish(page)
 
 	// main page & login
 	//
 	log.Printf("Starting login\n")
-	_, err := page.Goto("https://mycauseuk.paamapplication.co.uk/mycauseuk/", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
+	_, err = page.Goto("https://mycauseuk.paamapplication.co.uk/mycauseuk/", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 	if err != nil {
 		panic(fmt.Sprintf("could not goto url: %v", err))
 	}
 
 	log.Printf("Logging in\n")
 	// <input type="text" name="username" id="username">
-	err = page.Locator("#username").Fill(*username)
+	err = page.Locator("#username").Fill(options.Username)
 	if err != nil {
 		panic(fmt.Sprintf("could not get username: %v", err))
 	}
 	// <input type="password" name="password" id="password">
-	err = page.Locator("#password").Fill(*password)
+	err = page.Locator("#password").Fill(options.Password)
 	if err != nil {
 		panic(fmt.Sprintf("could not get password: %v", err))
 	}

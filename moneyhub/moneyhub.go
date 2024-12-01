@@ -8,79 +8,37 @@ package main
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"log"
 	"os"
 	"regexp"
-	"strconv"
-	"strings"
 
+	"github.com/jessevdk/go-flags"
 	"github.com/playwright-community/playwright-go"
 	"github.com/plord12/webscrapers/utils"
 )
 
+type Options struct {
+	Headless bool     `short:"e" long:"headless" description:"Headless mode" env:"HEADLESS"`
+	Username string   `short:"u" long:"username" description:"Moneyhub username" env:"MONEYHUB_USERNAME" required:"true"`
+	Password string   `short:"p" long:"password" description:"Moneyhub password" env:"MONEYHUB_PASSWORD" required:"true"`
+	Accounts []string `short:"a" long:"account" description:"Moneyhub account(s)" env:"MONEYHUB_ACCOUNT" env-delim:"," required:"true"`
+	Balances []string `short:"b" long:"balance" description:"Moneyhub balance(s)" env:"MONEYHUB_BALANCE" env-delim:"," required:"true"`
+}
+
+var options Options
+var parser = flags.NewParser(&options, flags.Default)
+
 func main() {
-
-	// defaults from environment
-	//
-	defaultHeadless := true
-	defaultUsername := ""
-	defaultPassword := ""
-	defaultAccount := ""
-	defaultBalance := "0.0"
-
-	var err error
-
-	if envHeadless := os.Getenv("HEADLESS"); envHeadless != "" {
-		defaultHeadless, _ = strconv.ParseBool(envHeadless)
-	}
-	if envUsername := os.Getenv("MONEYHUB_USERNAME"); envUsername != "" {
-		defaultUsername = envUsername
-	}
-	if envPassword := os.Getenv("MONEYHUB_PASSWORD"); envPassword != "" {
-		defaultPassword = envPassword
-	}
-	if envAccount := os.Getenv("MONEYHUB_ACCOUNT"); envAccount != "" {
-		defaultAccount = envAccount
-	}
-	if envBalance := os.Getenv("MONEYHUB_BALANCE"); envBalance != "" {
-		defaultBalance = envBalance
-	}
-
-	// arguments
-	//
-	headless := flag.Bool("headless", defaultHeadless, "Headless mode")
-
-	username := flag.String("username", defaultUsername, "Moneyhub username")
-	password := flag.String("password", defaultPassword, "Moneyhub password")
-	account := flag.String("account", defaultAccount, "Moneyhub account")
-	balance := flag.String("balance", defaultBalance, "Moneyhub balance for the account")
-
-	// usage
-	//
-	flag.Usage = func() {
-		fmt.Println("Update Moneyhub balance via web scraping")
-		fmt.Println("\nUsage:")
-		fmt.Printf("  %s [options]\n", os.Args[0])
-		fmt.Println("\nOptions:")
-		flag.PrintDefaults()
-		fmt.Println("\nEnvironment variables:")
-		fmt.Println("  $HEADLESS - Headless mode")
-		fmt.Println("  $MONEYHUB_USERNAME - Moneyhub username")
-		fmt.Println("  $MONEYHUB_PASSWORD - Moneyhub password")
-		fmt.Println("  $MONEYHUB_ACCOUNT - Moneyhub account(s)")
-		fmt.Println("  $MONEYHUB_BALANCE - Moneyhub balance(s) for the account")
-	}
 
 	// parse flags
 	//
-	flag.Parse()
+	_, err := parser.Parse()
+	if err != nil {
+		os.Exit(0)
+	}
 
-	accounts := strings.Split(*account, ",")
-	balances := strings.Split(*balance, ",")
-
-	if len(accounts) < 1 || len(balances) < 1 || len(accounts) != len(balances) {
+	if len(options.Accounts) < 1 || len(options.Balances) < 1 || len(options.Accounts) != len(options.Balances) {
 		panic("accounts and balances do not match")
 	}
 
@@ -88,7 +46,7 @@ func main() {
 
 	// setup
 	//
-	page := utils.StartChromium(headless)
+	page := utils.StartChromium(options.Headless)
 	defer utils.Finish(page)
 
 	// main page & login
@@ -101,12 +59,12 @@ func main() {
 
 	log.Printf("Logging in\n")
 	// <input name="email" id="email" autocomplete="username" data-aid="field-email" type="email" class="sc-eNQAEJ hgPDnc" value="">
-	err = page.Locator("#email").Fill(*username)
+	err = page.Locator("#email").Fill(options.Username)
 	if err != nil {
 		panic(fmt.Sprintf("could not get username: %v", err))
 	}
 	// <input name="password" id="password" data-aid="field-password" type="password" minlength="10" autocomplete="current-password" class="sc-hSdWYo kBIXYI" value="">
-	err = page.Locator("#password").Fill(*password)
+	err = page.Locator("#password").Fill(options.Password)
 	if err != nil {
 		panic(fmt.Sprintf("could not get password: %v", err))
 	}
@@ -118,7 +76,7 @@ func main() {
 
 	var failed bool = false
 
-	for i := 0; i < len(accounts); i++ {
+	for i := 0; i < len(options.Accounts); i++ {
 
 		// goto assets & update
 		//
@@ -132,47 +90,47 @@ func main() {
 		page.GetByText("Stay connected", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click(playwright.LocatorClickOptions{Timeout: playwright.Float(500.0)})
 
 		// <div data-aid="ListItemTitle" class="sc-bxivhb list-item-title__Title-sc-uq1r70-0 bOSooI">Peter Moneyfarm ISA [ manual ]</div>
-		err = page.GetByText(accounts[i], playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click()
+		err = page.GetByText(options.Accounts[i], playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click(playwright.LocatorClickOptions{Delay: playwright.Float(500.0)})
 		if err != nil {
-			log.Printf("could not goto asset: %s %v", accounts[i], err)
+			log.Printf("could not goto asset: %s %v", options.Accounts[i], err)
 			failed = true
 			continue
 		}
 		// <button label="appChrome.edit" data-aid="nav-bar-edit" aria-label="Edit Account" class="button__Button-sc-182rbpd-0 czyaZa"><div height="32px" width="32px" style="pointer-events: none;" aria-hidden="true"><div>...
 		err = page.Locator("[label=\"appChrome.edit\"]").Click(playwright.LocatorClickOptions{Delay: playwright.Float(500.0)})
 		if err != nil {
-			log.Printf("could not edit asset: %s %v", accounts[i], err)
+			log.Printf("could not edit asset: %s %v", options.Accounts[i], err)
 			failed = true
 			continue
 		}
 		//<span class="sc-bxivhb sc-ifAKCX byYfdZ">Update valuation</span>
 		//<span class="sc-bxivhb sc-ifAKCX byYfdZ">Update balance</span>
-		err = page.GetByText(regexp.MustCompile("^Update ")).Click()
+		err = page.GetByText(regexp.MustCompile("^Update ")).Click(playwright.LocatorClickOptions{Delay: playwright.Float(500.0)})
 		if err != nil {
-			log.Printf("could not update asset: %s %v", accounts[i], err)
+			log.Printf("could not update asset: %s %v", options.Accounts[i], err)
 			failed = true
 			continue
 		}
 		// <input name="balance" id="balance" type="text" inputmode="decimal" pattern="[0-9]*.?[0-9]*" autocomplete="off" class="sc-cSHVUG jVBxUm" value="92276.76">
 		err = page.Locator("#balance").Clear()
 		if err != nil {
-			log.Printf("could not clear balance: %s %v", accounts[i], err)
+			log.Printf("could not clear balance: %s %v", options.Accounts[i], err)
 			failed = true
 			continue
 		}
-		err = page.Locator("#balance").Fill(balances[i])
+		err = page.Locator("#balance").Fill(options.Balances[i])
 		if err != nil {
-			log.Printf("could not update balance: %s %v", accounts[i], err)
+			log.Printf("could not update balance: %s %v", options.Accounts[i], err)
 			failed = true
 			continue
 		}
 		err = page.GetByText("Save", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click()
 		if err != nil {
-			log.Printf("could not save balance: %s %v", accounts[i], err)
+			log.Printf("could not save balance: %s %v", options.Accounts[i], err)
 			failed = true
 			continue
 		} else {
-			log.Println("Account " + accounts[i] + " updated to " + balances[i])
+			log.Println("Account " + options.Accounts[i] + " updated to " + options.Balances[i])
 		}
 
 		page.Reload()

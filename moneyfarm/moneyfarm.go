@@ -8,93 +8,50 @@ package main
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 	"strings"
 
+	"github.com/jessevdk/go-flags"
 	"github.com/playwright-community/playwright-go"
 	"github.com/plord12/webscrapers/utils"
 )
 
+type Options struct {
+	Headless        bool   `short:"e" long:"headless" description:"Headless mode" env:"HEADLESS"`
+	Username        string `short:"u" long:"username" description:"Moneyfarm username" env:"MONEYFARM_USERNAME" required:"true"`
+	Password        string `short:"p" long:"password" description:"Moneyfarm password" env:"MONEYFARM_PASSWORD" required:"true"`
+	Otppath         string `short:"o" long:"otppath" description:"Path to file containing one time password message" default:"otp/moneyfarm" env:"OTP_PATH"`
+	Otpcommand      string `short:"c" long:"otpcommand" description:"Command to get one time password" env:"OTP_COMMAND"`
+	Otpcleancommand string `short:"l" long:"otpcleancommand" description:"Command to clean previous one time password" env:"OTP_CLEANCOMMAND"`
+}
+
+var options Options
+var parser = flags.NewParser(&options, flags.Default)
+
 func main() {
-
-	// defaults from environment
-	//
-	defaultHeadless := true
-	defaultUsername := ""
-	defaultPassword := ""
-	defaultOtpPath := "otp/moneyfarm"
-	defaultOtpCleanCommand := ""
-	defaultOtpCommand := ""
-
-	if envHeadless := os.Getenv("HEADLESS"); envHeadless != "" {
-		defaultHeadless, _ = strconv.ParseBool(envHeadless)
-	}
-	if envUsername := os.Getenv("MONEYFARM_USERNAME"); envUsername != "" {
-		defaultUsername = envUsername
-	}
-	if envPassword := os.Getenv("MONEYFARM_PASSWORD"); envPassword != "" {
-		defaultPassword = envPassword
-	}
-	if envOtpPath := os.Getenv("OTP_PATH"); envOtpPath != "" {
-		defaultOtpPath = envOtpPath
-	}
-	if envOtpCleanCommand := os.Getenv("OTP_CLEANCOMMAND"); envOtpCleanCommand != "" {
-		defaultOtpCleanCommand = envOtpCleanCommand
-	}
-	if envOtpCommand := os.Getenv("OTP_COMMAND"); envOtpCommand != "" {
-		defaultOtpCommand = envOtpCommand
-	}
-
-	// arguments
-	//
-	headless := flag.Bool("headless", defaultHeadless, "Headless mode")
-	otpCommand := flag.String("otpcommand", defaultOtpCommand, "Command to get one time password")
-	otpCleanCommand := flag.String("otpcleancommand", defaultOtpCleanCommand, "Command to clean previous one time password")
-	otpPath := flag.String("otppath", defaultOtpPath, "Path to file containing one time password message")
-
-	username := flag.String("username", defaultUsername, "Moneyfarm username")
-	password := flag.String("password", defaultPassword, "Moneyfarm password")
-
-	// usage
-	//
-	flag.Usage = func() {
-		fmt.Println("Retrive Moneyfarm balance via web scraping")
-		fmt.Println("\nUsage:")
-		fmt.Printf("  %s [options]\n", os.Args[0])
-		fmt.Println("\nOptions:")
-		flag.PrintDefaults()
-		fmt.Println("\nEnvironment variables:")
-		fmt.Println("  $HEADLESS - Headless mode")
-		fmt.Println("  $OTP_CLEANCOMMAND - Command to clean previous one time password")
-		fmt.Println("  $OTP_COMMAND - Command to get one time password")
-		fmt.Println("  $OTP_PATH - Path to file containing one time password message")
-		fmt.Println("  $MONEYFARM_USERNAME - Moneyfarm username")
-		fmt.Println("  $MONEYFARM_PASSWORD - Moneyfarm password")
-	}
 
 	// parse flags
 	//
-	flag.Parse()
-
-	// FIX THIS - validate
+	_, err := parser.Parse()
+	if err != nil {
+		os.Exit(0)
+	}
 
 	// clean from any previous run
 	//
-	utils.CleanOTP(otpCleanCommand, otpPath)
+	utils.CleanOTP(options.Otpcleancommand, options.Otppath)
 
 	// setup
 	//
-	page := utils.StartChromium(headless)
+	page := utils.StartChromium(options.Headless)
 	defer utils.Finish(page)
 
 	// main page & login
 	//
 	log.Printf("Starting login\n")
-	_, err := page.Goto("https://app.moneyfarm.com/gb/sign-in", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
+	_, err = page.Goto("https://app.moneyfarm.com/gb/sign-in", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 	if err != nil {
 		panic(fmt.Sprintf("could not goto url: %v", err))
 	}
@@ -105,12 +62,12 @@ func main() {
 
 	log.Printf("Logging in\n")
 	// <input type="email" id="email" name="email" autocomplete="email" class="sc-dWddBi dbJxuP" value="">
-	err = page.Locator("#email").Fill(*username)
+	err = page.Locator("#email").Fill(options.Username)
 	if err != nil {
 		panic(fmt.Sprintf("could not get username: %v", err))
 	}
 	// <input type="password" id="password" name="password" autocomplete="current-password" class="sc-dWddBi dbJxuP" value="">
-	err = page.Locator("#password").Fill(*password)
+	err = page.Locator("#password").Fill(options.Password)
 	if err != nil {
 		panic(fmt.Sprintf("could not get password: %v", err))
 	}
@@ -122,11 +79,11 @@ func main() {
 
 	// attempt to fetch one time password if needed
 	//
-	utils.FetchOTP(otpCommand)
+	utils.FetchOTP(options.Otpcommand)
 
 	// check/poll if otp exists ... could be via the above command or pushed here elsewhere
 	//
-	otp := utils.PollOTP(otpPath)
+	otp := utils.PollOTP(options.Otppath)
 
 	if otp != "" {
 		log.Println("otp=" + string(otp))
