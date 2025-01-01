@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
+	"time"
 
 	"github.com/jessevdk/go-flags"
 	"github.com/playwright-community/playwright-go"
@@ -62,37 +62,30 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("could not click: %v", err))
 	}
-	err = page.Locator(".jAWbYk").Click()
-	if err != nil {
-		panic(fmt.Sprintf("could not click: %v", err))
-	}
-	split := strings.Split(page.URL(), "/")
-	var account string
-	if len(split) > 6 {
-		account = split[6]
-	} else {
-		panic("could not get account")
-	}
 
 	page.SetDefaultTimeout(5000)
 
-	log.Println("Spinning electricity for " + account)
-	// electricity
-	//
-	_, err = page.Goto("https://octopus.energy/dashboard/new/accounts/"+account+"/wheel-of-fortune/electricity", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
+	log.Printf("Looking for first wheel of fortune\n")
+	err = page.GetByText("Spin the Wheel of Fortune").First().Click()
 	if err != nil {
-		panic(fmt.Sprintf("could not goto url: %v", err))
+		log.Printf("Could not find first wheel of fortune\n")
+	} else {
+		page.Locator(".wheel").Click()
+		time.Sleep(5 * time.Second)
+		log.Printf("Done\n")
+		page.GoBack()
 	}
-	page.Locator(".wheel").Click()
 
-	log.Println("Spinning gas for " + account)
-	// electricity
-	//
-	_, err = page.Goto("https://octopus.energy/dashboard/new/accounts/"+account+"/wheel-of-fortune/gas", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
+	log.Printf("Looking for last wheel of fortune\n")
+	err = page.GetByText("Spin the Wheel of Fortune").Last().Click()
 	if err != nil {
-		panic(fmt.Sprintf("could not goto url: %v", err))
+		log.Printf("Could not find last wheel of fortune\n")
+	} else {
+		page.Locator(".wheel").Click()
+		time.Sleep(5 * time.Second)
+		log.Printf("Done\n")
+		page.GoBack()
 	}
-	page.Locator(".wheel").Click()
 
 	bufio.NewWriter(os.Stdout).Flush()
 }
