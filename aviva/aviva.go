@@ -49,6 +49,9 @@ func main() {
 	page := utils.StartCamoufox(options.Headless)
 	defer utils.Finish(page)
 
+	// Aviva can be really slow
+	page.SetDefaultTimeout(60000.0)
+
 	// main page & login
 	//
 	log.Printf("Starting login\n")
