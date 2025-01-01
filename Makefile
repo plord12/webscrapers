@@ -45,6 +45,7 @@ BINARIES+=${BINDIR}/${MYCAUSEUK_NAME}
 LINUXARM64BINDIR=bin-linux-arm64
 LINUXAMD64BINDIR=bin-linux-amd64
 DARWINARM64BINDIR=bin-darwin-arm64
+WINDOWSAMD64BINDIR=bin-windows-amd64
 
 all: ${BINDIR} ${BINARIES} otp
 
@@ -57,7 +58,7 @@ ${LINUXARM64BINDIR}:
 otp:
 	mkdir -p otp
 
-release: release-ha_ss_addon release-launch-linux-arm64 release-launch-linux-amd64 release-launch-darwin-arm64 release-webscrapers-linux-arm64 release-webscrapers-linux-amd64 release-webscrapers-darwin-arm64
+release: release-ha_ss_addon release-launch-linux-arm64 release-launch-linux-amd64 release-launch-darwin-arm64 release-launch-windows-amd64 release-webscrapers-linux-arm64 release-webscrapers-linux-amd64 release-webscrapers-darwin-arm64 release-webscrapers-windows-amd64
 
 release-ha_ss_addon: ${LINUXARM64BINDIR}/${HA_SS_NAME}  ${LINUXAMD64BINDIR}/${HA_SS_NAME}
 	cp ${LINUXARM64BINDIR}/${HA_SS_NAME} ha_ss_addon/${HA_SS_NAME}-linux-arm64
@@ -74,6 +75,9 @@ release-launch-linux-amd64: ${LINUXAMD64BINDIR}/${LAUNCH_NAME}
 release-launch-darwin-arm64: ${DARWINARM64BINDIR}/${LAUNCH_NAME}
 	cd ${DARWINARM64BINDIR} && zip ../launch-darwin-arm64-${VERSION}.zip $(notdir $^)
 
+release-launch-windows-amd64: ${WINDOWSAMD64BINDIR}/${LAUNCH_NAME}.exe
+	cd ${WINDOWSAMD64BINDIR} && zip ../launch-linux-windows-${VERSION}.zip $(notdir $^)
+
 release-webscrapers-linux-arm64: ${LINUXARM64BINDIR}/${AVIVA_NAME} ${LINUXARM64BINDIR}/${AVIVAMYMONEY_NAME} ${LINUXARM64BINDIR}/${NUTMEG_NAME} ${LINUXARM64BINDIR}/${FUND_NAME} ${LINUXARM64BINDIR}/${MONEYFARM_NAME} ${LINUXARM64BINDIR}/${OCTOPUSWHEEL_NAME} ${LINUXARM64BINDIR}/${MYCAUSEUK_NAME}
 	cd ${LINUXARM64BINDIR} && zip ../webscrapers-linux-arm64-${VERSION}.zip $(notdir $^)
 
@@ -82,6 +86,10 @@ release-webscrapers-linux-amd64: ${LINUXAMD64BINDIR}/${AVIVA_NAME} ${LINUXAMD64B
 
 release-webscrapers-darwin-arm64: ${DARWINARM64BINDIR}/${AVIVA_NAME} ${DARWINARM64BINDIR}/${AVIVAMYMONEY_NAME} ${DARWINARM64BINDIR}/${NUTMEG_NAME} ${DARWINARM64BINDIR}/${FUND_NAME} ${DARWINARM64BINDIR}/${MONEYFARM_NAME} ${DARWINARM64BINDIR}/${OCTOPUSWHEEL_NAME} ${DARWINARM64BINDIR}/${MYCAUSEUK_NAME}
 	cd ${DARWINARM64BINDIR} && zip ../webscrapers-darwin-arm64-${VERSION}.zip $(notdir $^)
+
+release-webscrapers-windows-amd64: ${WINDOWSAMD64BINDIR}/${AVIVA_NAME}.exe ${WINDOWSAMD64BINDIR}/${AVIVAMYMONEY_NAME}.exe ${WINDOWSAMD64BINDIR}/${NUTMEG_NAME}.exe ${WINDOWSAMD64BINDIR}/${FUND_NAME}.exe ${WINDOWSAMD64BINDIR}/${MONEYFARM_NAME}.exe ${WINDOWSAMD64BINDIR}/${OCTOPUSWHEEL_NAME}.exe ${WINDOWSAMD64BINDIR}/${MYCAUSEUK_NAME}.exe
+	cd ${WINDOWSAMD64BINDIR} && zip ../webscrapers-windows-amd64-${VERSION}.zip $(notdir $^)
+
 
 # launcher
 #
@@ -93,6 +101,8 @@ ${LINUXAMD64BINDIR}/${LAUNCH_NAME}: ${LAUNCH_SOURCE}
 	cd ${LAUNCH_NAME} && GOARCH=amd64 GOOS=linux go build -o ../$@
 ${DARWINARM64BINDIR}/${LAUNCH_NAME}: ${LAUNCH_SOURCE}
 	cd ${LAUNCH_NAME} && GOARCH=arm64 GOOS=darwin go build -o ../$@
+${WINDOWSAMD64BINDIR}/${LAUNCH_NAME}.exe: ${LAUNCH_SOURCE}
+	cd ${LAUNCH_NAME} && GOARCH=amd64 GOOS=windows go build -o ../$@
 
 # home assistant screenshots
 #
@@ -115,6 +125,8 @@ ${LINUXAMD64BINDIR}/${AVIVA_NAME}: ${AVIVA_SOURCE} ${UTILS_SOURCE}
 	GOARCH=amd64 GOOS=linux go build -o $@ $<
 ${DARWINARM64BINDIR}/${AVIVA_NAME}: ${AVIVA_SOURCE} ${UTILS_SOURCE}
 	GOARCH=arm64 GOOS=darwin go build -o $@ $<
+${WINDOWSAMD64BINDIR}/${AVIVA_NAME}.exe: ${AVIVA_SOURCE} ${UTILS_SOURCE}
+	GOARCH=amd64 GOOS=windows go build -o $@ $<
 
 # aviva my money
 #
@@ -126,6 +138,8 @@ ${LINUXAMD64BINDIR}/${AVIVAMYMONEY_NAME}: ${AVIVAMYMONEY_SOURCE} ${UTILS_SOURCE}
 	GOARCH=amd64 GOOS=linux go build -o $@ $<
 ${DARWINARM64BINDIR}/${AVIVAMYMONEY_NAME}: ${AVIVAMYMONEY_SOURCE} ${UTILS_SOURCE}
 	GOARCH=arm64 GOOS=darwin go build -o $@ $<
+${WINDOWSAMD64BINDIR}/${AVIVAMYMONEY_NAME}.exe: ${AVIVAMYMONEY_SOURCE} ${UTILS_SOURCE}
+	GOARCH=amd64 GOOS=windows go build -o $@ $<
 
 # nutmeg
 #
@@ -137,6 +151,8 @@ ${LINUXAMD64BINDIR}/${NUTMEG_NAME}: ${NUTMEG_SOURCE} ${UTILS_SOURCE}
 	GOARCH=amd64 GOOS=linux go build -o $@ $<
 ${DARWINARM64BINDIR}/${NUTMEG_NAME}: ${NUTMEG_SOURCE} ${UTILS_SOURCE}
 	GOARCH=arm64 GOOS=darwin go build -o $@ $<
+${WINDOWSAMD64BINDIR}/${NUTMEG_NAME}.exe: ${NUTMEG_SOURCE} ${UTILS_SOURCE}
+	GOARCH=amd64 GOOS=windows go build -o $@ $<
 
 # fund
 #
@@ -148,6 +164,8 @@ ${LINUXAMD64BINDIR}/${FUND_NAME}: ${FUND_SOURCE} ${UTILS_SOURCE}
 	GOARCH=amd64 GOOS=linux go build -o $@ $<
 ${DARWINARM64BINDIR}/${FUND_NAME}: ${FUND_SOURCE} ${UTILS_SOURCE}
 	GOARCH=arm64 GOOS=darwin go build -o $@ $<
+${WINDOWSAMD64BINDIR}/${FUND_NAME}.exe: ${FUND_SOURCE} ${UTILS_SOURCE}
+	GOARCH=amd64 GOOS=windows go build -o $@ $<
 
 # moneyfarm
 #
@@ -159,6 +177,8 @@ ${LINUXAMD64BINDIR}/${MONEYFARM_NAME}: ${MONEYFARM_SOURCE} ${UTILS_SOURCE}
 	GOARCH=amd64 GOOS=linux go build -o $@ $<
 ${DARWINARM64BINDIR}/${MONEYFARM_NAME}: ${MONEYFARM_SOURCE} ${UTILS_SOURCE}
 	GOARCH=arm64 GOOS=darwin go build -o $@ $<
+${WINDOWSAMD64BINDIR}/${MONEYFARM_NAME}.exe: ${MONEYFARM_SOURCE} ${UTILS_SOURCE}
+	GOARCH=amd64 GOOS=windows go build -o $@ $<
 
 # moneyhub
 #
@@ -170,6 +190,8 @@ ${LINUXAMD64BINDIR}/${MONEYHUB_NAME}: ${MONEYHUB_SOURCE} ${UTILS_SOURCE}
 	GOARCH=amd64 GOOS=linux go build -o $@ $<
 ${DARWINARM64BINDIR}/${MONEYHUB_NAME}: ${MONEYHUB_SOURCE} ${UTILS_SOURCE}
 	GOARCH=arm64 GOOS=darwin go build -o $@ $<
+${WINDOWSAMD64BINDIR}/${MONEYHUB_NAME}.exe: ${MONEYHUB_SOURCE} ${UTILS_SOURCE}
+	GOARCH=amd64 GOOS=windows go build -o $@ $<
 
 # octopus wheel
 #
@@ -181,6 +203,8 @@ ${LINUXAMD64BINDIR}/${OCTOPUSWHEEL_NAME}: ${OCTOPUSWHEEL_SOURCE} ${UTILS_SOURCE}
 	GOARCH=amd64 GOOS=linux go build -o $@ $<
 ${DARWINARM64BINDIR}/${OCTOPUSWHEEL_NAME}: ${OCTOPUSWHEEL_SOURCE} ${UTILS_SOURCE}
 	GOARCH=arm64 GOOS=darwin go build -o $@ $<
+${WINDOWSAMD64BINDIR}/${OCTOPUSWHEEL_NAME}.exe: ${OCTOPUSWHEEL_SOURCE} ${UTILS_SOURCE}
+	GOARCH=amd64 GOOS=windows go build -o $@ $<
 
 # mycauseuk
 #
@@ -192,6 +216,8 @@ ${LINUXAMD64BINDIR}/${MYCAUSEUK_NAME}: ${MYCAUSEUK_SOURCE} ${UTILS_SOURCE}
 	GOARCH=amd64 GOOS=linux go build -o $@ $<
 ${DARWINARM64BINDIR}/${MYCAUSEUK_NAME}: ${MYCAUSEUK_SOURCE} ${UTILS_SOURCE}
 	GOARCH=arm64 GOOS=darwin go build -o $@ $<
+${WINDOWSAMD64BINDIR}/${MYCAUSEUK_NAME}.exe: ${MYCAUSEUK_SOURCE} ${UTILS_SOURCE}
+	GOARCH=amd64 GOOS=windows go build -o $@ $<
 
 test: testha testaviva testavivamymoney testnutmeg testfund testmoneyfarm testmoneyhub testoctopuswheel
 
@@ -249,4 +275,4 @@ testmycauseuk: ${BINDIR}/${MYCAUSEUK_NAME}
 
 clean:
 	@go clean
-	-@rm -rf ${BINDIR} ${LINUXARM64BINDIR} ${LINUXAMD64BINDIR} ${DARWINARM64BINDIR} test*.png *.zip 2>/dev/null || true
+	-@rm -rf ${BINDIR} ${LINUXARM64BINDIR} ${LINUXAMD64BINDIR} ${DARWINARM64BINDIR} ${WINDOWSAMD64BINDIR} test*.png *.zip 2>/dev/null || true
