@@ -27,6 +27,8 @@ OCTOPUSREWARDS_NAME=octopusrewards
 OCTOPUSREWARDS_SOURCE=${OCTOPUSREWARDS_NAME}/${OCTOPUSREWARDS_NAME}.go
 MYCAUSEUK_NAME=mycauseuk
 MYCAUSEUK_SOURCE=${MYCAUSEUK_NAME}/${MYCAUSEUK_NAME}.go
+U3AGROUPS_NAME=u3agroups
+U3AGROUPS_SOURCE=${U3AGROUPS_NAME}/${U3AGROUPS_NAME}.go
 LAUNCH_NAME=launch
 LAUNCH_SOURCE=${LAUNCH_NAME}/constants.go ${LAUNCH_NAME}/exec.go ${LAUNCH_NAME}/load-addons.go ${LAUNCH_NAME}/main.go ${LAUNCH_NAME}/procgroup-unix.go ${LAUNCH_NAME}/procgroup-win.go ${LAUNCH_NAME}/validate.go ${LAUNCH_NAME}/xpi-dl.go
 
@@ -44,6 +46,7 @@ BINARIES+=${BINDIR}/${MONEYHUB_NAME}
 BINARIES+=${BINDIR}/${OCTOPUSWHEEL_NAME} 
 BINARIES+=${BINDIR}/${OCTOPUSREWARDS_NAME} 
 BINARIES+=${BINDIR}/${MYCAUSEUK_NAME} 
+BINARIES+=${BINDIR}/${U3AGROUPS_NAME} 
 
 LINUXARM64BINDIR=bin-linux-arm64
 LINUXAMD64BINDIR=bin-linux-amd64
@@ -235,7 +238,20 @@ ${DARWINARM64BINDIR}/${MYCAUSEUK_NAME}: ${MYCAUSEUK_SOURCE} ${UTILS_SOURCE}
 ${WINDOWSAMD64BINDIR}/${MYCAUSEUK_NAME}.exe: ${MYCAUSEUK_SOURCE} ${UTILS_SOURCE}
 	GOARCH=amd64 GOOS=windows go build -o $@ $<
 
-test: testha testaviva testavivamymoney testnutmeg testfund testmoneyfarm testmoneyhub testoctopuswheel
+# u3agroups
+#
+${BINDIR}/${U3AGROUPS_NAME}: ${U3AGROUPS_SOURCE} ${UTILS_SOURCE}
+	go build -o $@ $<
+${LINUXARM64BINDIR}/${U3AGROUPS_NAME}: ${U3AGROUPS_SOURCE} ${UTILS_SOURCE}
+	GOARCH=arm64 GOOS=linux go build -o $@ $<
+${LINUXAMD64BINDIR}/${U3AGROUPS_NAME}: ${U3AGROUPS_SOURCE} ${UTILS_SOURCE}
+	GOARCH=amd64 GOOS=linux go build -o $@ $<
+${DARWINARM64BINDIR}/${U3AGROUPS_NAME}: ${U3AGROUPS_SOURCE} ${UTILS_SOURCE}
+	GOARCH=arm64 GOOS=darwin go build -o $@ $<
+${WINDOWSAMD64BINDIR}/${U3AGROUPS_NAME}.exe: ${U3AGROUPS_SOURCE} ${UTILS_SOURCE}
+	GOARCH=amd64 GOOS=windows go build -o $@ $<
+
+test: testha testaviva testavivamymoney testnutmeg testfund testmoneyfarm testmoneyhub testoctopuswheel testu3agroups
 
 testha: ${BINDIR}/${HA_SS_NAME}
 	${BINDIR}/${HA_SS_NAME} --help
@@ -292,6 +308,11 @@ testoctopusrewards: ${BINDIR}/${OCTOPUSREWARDS_NAME}
 testmycauseuk: ${BINDIR}/${MYCAUSEUK_NAME}
 	${BINDIR}/${MYCAUSEUK_NAME} --help
 	${BINDIR}/${MYCAUSEUK_NAME} --username "$(TEST1_MYCAUSEUK_USERNAME)" --password "$(TEST1_MYCAUSEUK_PASSWORD)"
+
+testu3agroups: ${BINDIR}/${U3AGROUPS_NAME}
+	${BINDIR}/${U3AGROUPS_NAME} --help
+	${BINDIR}/${U3AGROUPS_NAME} --search "technology" --name "My Name" --email "somewhere@something.org" --subject "Test Subject" --message "Test Message"
+
 
 clean:
 	@go clean
