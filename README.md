@@ -10,6 +10,7 @@ This contains a set of webscrapers I personally use.
 * [Money Hub](#user-content-money-hub)
 * [Nutmeg](#user-content-nutmeg)
 * [Octopus Wheel](#user-content-octopus-wheel)
+* [U3A Groups](#user-content-u3a-groups)
 * [Desktop Testing](#user-content-desktop-testing)
 * [Pension Scripting](#user-content-pension-scripting)
 
@@ -33,83 +34,44 @@ FFMPEG playwright build v1010 downloaded to /Users/plord/Library/Caches/ms-playw
 Connect to [Aviva](https://www.direct.aviva.co.uk/MyAccount/login), login, process one-time-password and return account balance.
 
 ```
-Retrive Aviva balance via web scraping
-
 Usage:
-  bin/aviva [options]
+  aviva [OPTIONS]
 
-Options:
-  -headless
-    	Headless mode (default true)
-  -otpcleancommand string
-    	Command to clean previous one time password
-  -otpcommand string
-    	Command to get one time password
-  -otppath string
-    	Path to file containing one time password message (default "otp/aviva")
-  -password string
-    	Aviva password
-  -username string
-    	Aviva username
-
-Environment variables:
-  $HEADLESS - Headless mode
-  $OTP_COMMAND - Command to get one time password
-  $OTP_PATH - Path to file containing one time password message
-  $AVIVA_USERNAME - Aviva username
-  $AVIVA_PASSWORD - Aviva password
+Application Options:
+  -e, --headless         Headless mode [$HEADLESS]
+  -u, --username=        Aviva username [$AVIVA_USERNAME]
+  -p, --password=        Aviva password [$AVIVA_PASSWORD]
+  -o, --otppath=         Path to file containing one time password message (default: otp/aviva) [$OTP_PATH]
+  -c, --otpcommand=      Command to get one time password [$OTP_COMMAND]
+  -l, --otpcleancommand= Command to clean previous one time password [$OTP_CLEANCOMMAND]
 ```
-
-Note playwright can be defeated by Aviva's Akamai CDN, so a python version is also included that uses selenium undetected_chromedriver.
 
 ## [Aviva My Money](avivamymoney)
 
 Connect to [Aviva My Money](https://www.avivamymoney.co.uk/Login), login and return account balance.
 
 ```
-Retrive Aviva my money balance via web scraping
-
 Usage:
-  bin/avivamymoney [options]
+  avivamymoney [OPTIONS]
 
-Options:
-  -headless
-    	Headless mode (default true)
-  -password string
-    	Aviva my money password
-  -username string
-    	Aviva my money username
-  -word string
-    	Aviva my money memorable word
-
-Environment variables:
-  $HEADLESS - Headless mode
-  $AVIVAMYMONEY_USERNAME - Aviva my money username
-  $AVIVAMYMONEY_PASSWORD - Aviva my money password
-  $AVIVAMYMONEY_WORD - Aviva my money memorable word
+Application Options:
+  -e, --headless  Headless mode [$HEADLESS]
+  -u, --username= Aviva my money username [$AVIVAMYMONEY_USERNAME]
+  -p, --password= Aviva my money password [$AVIVAMYMONEY_PASSWORD]
+  -w, --word=     Aviva my money memorable word [$AVIVAMYMONEY_WORD]
 ```
-
-Note playwright can be defeated by Aviva's Akamai CDN, so a python version is also included that uses selenium undetected_chromedriver.
 
 ## [Fund](fund)
 
 Connect to [Financial Times](https://markets.ft.com) and return fund value.
 
 ```
-Retrive fund value via web scraping
-
 Usage:
-  bin/fund [options]
+  fund [OPTIONS]
 
-Options:
-  -fund string
-    	Fund name
-  -headless
-    	Headless mode (default true)
-
-Environment variables:
-  $HEADLESS - Headless mode
-  $FUND - Fund name
+Application Options:
+  -e, --headless  Headless mode [$HEADLESS]
+  -f, --fund=     Fund name [$FUND]
 ```
 
 ## [Home Assistant Screen Shot](ha_ss)
@@ -117,35 +79,17 @@ Environment variables:
 Connect to local Home Assistant instance, login and take a screen shot based on CSS selector.
 
 ```
-Connect to Home Assistant and take a screenshot by CSS selector
-
 Usage:
-  bin/ha_ss [options]
+  ha_ss [OPTIONS]
 
-Options:
-  -css string
-    	Home assistant CSS selector
-  -headless
-    	Headless mode (default true)
-  -password string
-    	Home assistant password
-  -path string
-    	Output screenshot path (default "output.png")
-  -restport int
-    	If set, startup REST server at given port
-  -url string
-    	Home assistant page URL
-  -username string
-    	Home assistant username
-
-Environment variables:
-  $HEADLESS - Headless mode
-  $HA_CSS - Home assistant CSS selector
-  $HA_PATH - Output screenshot path
-  $HA_USERNAME - Home assistant username
-  $HA_PASSWORD - Home assistant password
-  $HA_RESTPORT - If set, startup REST server at given port
-  $HA_URL - Home assistant page URL
+Application Options:
+  -e, --headless  Headless mode [$HEADLESS]
+  -u, --username= Home assistant username [$HA_USERNAME]
+  -p, --password= Home assistant password [$HA_PASSWORD]
+  -r, --restport= If set, startup REST server at given port [$HA_RESTPORT]
+  -l, --url=      Home assistant page URL [$HA_URL]
+  -c, --css=      Home assistant CSS selector [$HA_CSS]
+  -a, --path=     Output screenshot path (default: output.png) [$HA_PATH]
 ```
 
 ### Find CCS selector
@@ -230,32 +174,16 @@ rest_command:
 Connect to [Moneyfarm](hhttps://app.moneyfarm.com/gb/sign-in), login, process one-time-password and return account balance.
 
 ```
-Retrive Moneyfarm balance via web scraping
-
 Usage:
-  bin/moneyfarm [options]
+  moneyfarm [OPTIONS]
 
-Options:
-  -headless
-    	Headless mode (default true)
-  -otpcleancommand string
-    	Command to clean previous one time password
-  -otpcommand string
-    	Command to get one time password
-  -otppath string
-    	Path to file containing one time password message (default "otp/moneyfarm")
-  -password string
-    	Moneyfarm password
-  -username string
-    	Moneyfarm username
-
-Environment variables:
-  $HEADLESS - Headless mode
-  $OTP_CLEANCOMMAND - Command to clean previous one time password
-  $OTP_COMMAND - Command to get one time password
-  $OTP_PATH - Path to file containing one time password message
-  $MONEYFARM_USERNAME - Moneyfarm username
-  $MONEYFARM_PASSWORD - Moneyfarm password
+Application Options:
+  -e, --headless         Headless mode [$HEADLESS]
+  -u, --username=        Moneyfarm username [$MONEYFARM_USERNAME]
+  -p, --password=        Moneyfarm password [$MONEYFARM_PASSWORD]
+  -o, --otppath=         Path to file containing one time password message (default: otp/moneyfarm) [$OTP_PATH]
+  -c, --otpcommand=      Command to get one time password [$OTP_COMMAND]
+  -l, --otpcleancommand= Command to clean previous one time password [$OTP_CLEANCOMMAND]
 ```
 
 ## [Money Hub](moneyhub)
@@ -263,29 +191,15 @@ Environment variables:
 Connect to [Money Hub](https://client.moneyhub.co.uk), login and update the balance of one asset.
 
 ```
-Update Moneyhub balance via web scraping
-
 Usage:
-  bin/moneyhub [options]
+  moneyhub [OPTIONS]
 
-Options:
-  -account string
-    	Moneyhub account
-  -balance float
-    	Moneyhub balance for the account
-  -headless
-    	Headless mode (default true)
-  -password string
-    	Moneyhub password
-  -username string
-    	Moneyhub username
-
-Environment variables:
-  $HEADLESS - Headless mode
-  $MONEYHUB_USERNAME - Moneyhub username
-  $MONEYHUB_PASSWORD - Moneyhub password
-  $MONEYHUB_ACCOUNT - Moneyhub account
-  $MONEYHUB_BALANCE - Moneyhub balance for the account
+Application Options:
+  -e, --headless  Headless mode [$HEADLESS]
+  -u, --username= Moneyhub username [$MONEYHUB_USERNAME]
+  -p, --password= Moneyhub password [$MONEYHUB_PASSWORD]
+  -a, --account=  Moneyhub account(s) [$MONEYHUB_ACCOUNT]
+  -b, --balance=  Moneyhub balance(s) [$MONEYHUB_BALANCE]
 ```
 
 ## [Nutmeg](nutmeg)
@@ -293,32 +207,16 @@ Environment variables:
 Connect to [Nutmeg](https://authentication.nutmeg.com/login), login, process one-time-password and return account balance.
 
 ```
-Retrive Nutmeg balance via web scraping
-
 Usage:
-  bin/nutmeg [options]
+  nutmeg [OPTIONS]
 
-Options:
-  -headless
-    	Headless mode (default true)
-  -otpcleancommand string
-    	Command to clean previous one time password
-  -otpcommand string
-    	Command to get one time password
-  -otppath string
-    	Path to file containing one time password message (default "otp/nutmeg")
-  -password string
-    	Nutmeg password
-  -username string
-    	Nutmeg username
-
-Environment variables:
-  $HEADLESS - Headless mode
-  $OTP_CLEANCOMMAND - Command to clean previous one time password
-  $OTP_COMMAND - Command to get one time password
-  $OTP_PATH - Path to file containing one time password message
-  $NUTMEG_USERNAME - Nutmeg username
-  $NUTMEG_PASSWORD - Nutmeg password
+Application Options:
+  -e, --headless         Headless mode [$HEADLESS]
+  -u, --username=        Nutmeg username [$NUTMEG_USERNAME]
+  -p, --password=        Nutmeg password [$NUTMEG_PASSWORD]
+  -o, --otppath=         Path to file containing one time password message (default: otp/nutmeg) [$OTP_PATH]
+  -c, --otpcommand=      Command to get one time password [$OTP_COMMAND]
+  -l, --otpcleancommand= Command to clean previous one time password [$OTP_CLEANCOMMAND]
 ```
 
 ## [Octopus Wheel](octopuswheel)
@@ -326,23 +224,31 @@ Environment variables:
 Connect to [Octopus Energy](https://octopus.energy/login/), login and spin wheel of furtune.
 
 ```
-Spin octopus wheel of fortune via web scraping
-
 Usage:
-  bin/octopuswheel [options]
+  octopuswheel [OPTIONS]
 
-Options:
-  -headless
-    	Headless mode (default true)
-  -password string
-    	Octopus password
-  -username string
-    	Octopus username
+Application Options:
+  -e, --headless  Headless mode [$HEADLESS]
+  -u, --username= Octopus username [$OCTOPUS_USERNAME]
+  -p, --password= Octopus password [$OCTOPUS_PASSWORD]
+```
 
-Environment variables:
-  $HEADLESS - Headless mode
-  $OCTOPUS_USERNAME - Octopus username
-  $OCTOPUS_PASSWORD - Octopus password
+## [U3A Groups](u3agroups)
+
+Find U3A groups from https://u3asites.org.uk/oversights/groups/groupsearch.php and send a message to group co-ordinators
+
+```
+Usage:
+  u3agroups [OPTIONS]
+
+Application Options:
+  -e, --headless  Headless mode [$HEADLESS]
+  -s, --search=   Search term [$U3AGROUPS_SEARCH]
+  -n, --name=     Message name [$U3AGROUPS_NAME]
+  -m, --email=    Message email [$U3AGROUPS_EMAIL]
+  -u, --subject=  Message subject [$U3AGROUPS_SUBJECT]
+  -g, --message=  Message [$U3AGROUPS_MESSAGE]
+  -d, --send      Send message [$U3AGROUPS_SEND]
 ```
 
 # Desktop Testing

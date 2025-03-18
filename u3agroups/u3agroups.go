@@ -48,7 +48,7 @@ func main() {
 	// main page & search
 	//
 	log.Printf("Starting search\n")
-	_, err = page.Goto("https://u3asites.org.uk/oversights/groups/", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
+	_, err = page.Goto("https://u3asites.org.uk/oversights/groups/groupsearch.php", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 	if err != nil {
 		panic(fmt.Sprintf("could not goto url: %v", err))
 	}
