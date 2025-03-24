@@ -105,11 +105,7 @@ func main() {
 
 	// get balance
 	//
-	// <span aria-hidden="false" class="sc-jcRCNh ieovWt">£92,276.76</span>
-	// <span aria-hidden="false" class="sc-fnlXEO jnYmoZ">£92,411.26</span>
-	// <span aria-hidden="false" class="sc-fkubCs cbMcKh">£93,769.87</span>
-	// <span aria-hidden="false" class="sc-iuGLgT kHqTJT">£90,376.02</span>
-	balance, err := page.Locator("[class=\"sc-iuGLgT kHqTJT\"]").First().TextContent()
+	balance, err := page.GetByText("£").First().TextContent()
 	if err != nil {
 		panic(fmt.Sprintf("failed to get balance: %v", err))
 	}
