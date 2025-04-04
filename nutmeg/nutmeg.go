@@ -8,6 +8,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/base64"
 	"fmt"
 	"log"
 	"os"
@@ -71,6 +72,18 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("could not get password: %v", err))
 	}
+	// captcha
+	page.SetDefaultTimeout(1000.0)
+	svg, err := page.GetByAltText("captcha").GetAttribute("src")
+	if err == nil {
+		svgString, err := base64.StdEncoding.DecodeString(strings.Split(svg, ",")[1])
+		if err == nil {
+			captcha := utils.SolveCaptcha(string(svgString[:]))
+			log.Println("captcha=" + captcha)
+			page.Locator("#captcha").Fill(captcha)
+		}
+	}
+	page.SetDefaultTimeout(30000.0)
 	// <button type="submit" name="action" value="default" class="c0a486a03 c3a925026 cc4e2760d cf0fbb154 c4b20090f" data-action-button-primary="true">Sign in</button>
 	err = page.GetByRole("button", playwright.PageGetByRoleOptions{Name: "Sign in"}).Click()
 	if err != nil {
