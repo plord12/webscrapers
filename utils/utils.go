@@ -251,6 +251,8 @@ func PollOTP(otpPath string) string {
 }
 
 // solve svg captcha
+//
+// see https://dev.to/sushrut111/decode-captcha-created-by-library-svg-captcha-5d36
 func SolveCaptcha(svgString string) string {
 
 	model := map[string]string{
