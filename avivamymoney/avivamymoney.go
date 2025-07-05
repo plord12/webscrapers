@@ -53,7 +53,7 @@ func main() {
 
 	// dismiss pop-up
 	//
-	page.GetByText("Accept all cookies", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click()
+	page.GetByText("Essential cookies only", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click()
 
 	log.Printf("Logging in\n")
 	// <input autocomplete="off" id="Username" maxlength="50" name="Username" tabindex="1" type="text" value="">

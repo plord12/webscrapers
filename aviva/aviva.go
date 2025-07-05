@@ -62,8 +62,7 @@ func main() {
 
 	// dismiss pop-up
 	//
-	// <button id="onetrust-accept-btn-handler">Accept all cookies</button>
-	page.GetByText("Accept all cookies", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click(playwright.LocatorClickOptions{Timeout: playwright.Float(2000.0)})
+	page.GetByText("Essential cookies only", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click(playwright.LocatorClickOptions{Timeout: playwright.Float(2000.0)})
 
 	log.Printf("Logging in\n")
 	// <input aria-required="True" autocomplete="off" class="a-textbox" data-qa-textbox="username" data-val="true" data-val-required="Please enter your username" id="username" maxlength="50" name="username" type="text" value="">

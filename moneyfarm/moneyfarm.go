@@ -58,7 +58,8 @@ func main() {
 
 	// accept cookies
 	//
-	page.GetByText("OK, I agree", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click()
+	page.GetByText("Manage preferences", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click()
+	page.GetByText("Save settings", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click()
 
 	log.Printf("Logging in\n")
 	// <input type="email" id="email" name="email" autocomplete="email" class="sc-dWddBi dbJxuP" value="">
