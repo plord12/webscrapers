@@ -102,8 +102,8 @@ func main() {
 	if otp != "" {
 		log.Println("otp=" + string(otp))
 
-		// <label aria-hidden="true" class="cd7843ea8 c6c423b62 c6c2d595a" for="code">Enter the 6-digit code*</label>
-		err = page.GetByText("Enter the 6-digit code*", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Fill(otp)
+		// <label id="code-label" class="c6a59d0a8 c475c5d09 c8a57b7ed" for="code">Enter the 6-digit code<span class="required" aria-hidden="true">*</span></label>
+		err = page.Locator("#code-label").Fill(otp)
 		if err != nil {
 			panic(fmt.Sprintf("could not set otp: %v", err))
 		}
