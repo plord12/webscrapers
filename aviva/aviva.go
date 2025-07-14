@@ -113,14 +113,7 @@ func main() {
 	// get balance
 	//
 
-	// <a data-qa-button="Details" data-dd-link="Details" data-dd-loc="roundel" data-dd-group="myavivaHomePage" href="/MyPortfolio/ViewDetail?id=A3Acnhvs2bv17h0NKjx1t0s0fhGjFYRBO_3hxv9uIG41&amp;productCode=50010" class="button yellow dd-data-link">Details</a>
-	err = page.Locator("[data-qa-button=Details]").Click()
-	if err != nil {
-		panic(fmt.Sprintf("failed to click on details: %v", err))
-	}
-
-	// <p class="a-heading a-heading--0 font-yellow u-margin--top-none" data-qa-field="yourPensionValue">£123,456.72</p>
-	balance, err := page.Locator("[data-qa-field=yourPensionValue]").TextContent()
+	balance, err := page.Locator("[data-qa-text=total-plan-value]").TextContent()
 	if err != nil {
 		panic(fmt.Sprintf("failed to get balance: %v", err))
 	}
