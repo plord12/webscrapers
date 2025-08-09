@@ -114,7 +114,7 @@ func screenshot(headless bool, username string, password string, url string, css
 	if err != nil {
 		return fmt.Errorf("could not get password: %v", err)
 	}
-	err = page.Locator("[id=button]").Click()
+	err = page.Locator("[type=button]").Click()
 	if err != nil {
 		return fmt.Errorf("could not click: %v", err)
 	}
