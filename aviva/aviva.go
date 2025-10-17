@@ -97,7 +97,7 @@ func main() {
 	if otp != "" {
 		log.Println("otp=" + string(otp))
 
-		err = page.Locator("#factor").Fill(otp)
+		err = page.Locator("#verificationCode").Fill(otp)
 		if err != nil {
 			panic(fmt.Sprintf("could not set otp: %v", err))
 		}
