@@ -2,7 +2,7 @@
 This contains a set of webscrapers I personally use.  
 
 * [Aviva](#user-content-aviva)
-* [Aviva My Money](#user-content-aviva-my-money)
+* [Aviva My Workplace](#user-content-aviva-my-workplace)
 * [Fund](#user-content-fund)
 * [Home Assistant Screen Shot](#user-content-home-assistant-screen-shot)
 * [Home Assistant Screen Shot Addon](#user-content-home-assistant-screen-shot-addon)
@@ -46,19 +46,18 @@ Application Options:
   -l, --otpcleancommand= Command to clean previous one time password [$OTP_CLEANCOMMAND]
 ```
 
-## [Aviva My Money](avivamymoney)
+## [Aviva My Workplace](avivamyworkplace)
 
-Connect to [Aviva My Money](https://www.avivamymoney.co.uk/Login), login and return account balance.
+Connect to [Aviva My Workplace](https://zzz.myworkplace.aviva.co.uk), login and return account balance.
 
 ```
 Usage:
-  avivamymoney [OPTIONS]
+  avivamyworkplace [OPTIONS]
 
 Application Options:
   -e, --headless  Headless mode [$HEADLESS]
-  -u, --username= Aviva my money username [$AVIVAMYMONEY_USERNAME]
-  -p, --password= Aviva my money password [$AVIVAMYMONEY_PASSWORD]
-  -w, --word=     Aviva my money memorable word [$AVIVAMYMONEY_WORD]
+  -u, --username= Aviva my money username [$AVIVAMYWORKPLACE_USERNAME]
+  -p, --password= Aviva my money password [$AVIVAMYWORKPLACE_PASSWORD]
 ```
 
 ## [Fund](fund)
@@ -276,9 +275,8 @@ AVIVA_PASSWORD=xxx
 AVIVA_OTPCLEANCOMMAND=ssh xxx rm src/webscrapers/otp/aviva
 AVIVA_OTPCOMMAND=scp xxx:src/webscrapers/otp/aviva otp/aviva
 
-AVIVAMYMONEY_USERNAME=xxx
-AVIVAMYMONEY_PASSWORD=xxx
-AVIVAMYMONEY_WORD=xxx
+AVIVAMYWORKPLACE_USERNAME=xxx
+AVIVAMYWORKPLACE_PASSWORD=xxx
 
 TEST1_NUTMEG_USERNAME=xxx
 TEST1_NUTMEG_PASSWORD=xxx
