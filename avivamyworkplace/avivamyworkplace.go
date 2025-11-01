@@ -19,9 +19,12 @@ import (
 )
 
 type Options struct {
-	Headless bool   `short:"e" long:"headless" description:"Headless mode" env:"HEADLESS"`
-	Username string `short:"u" long:"username" description:"Aviva my workplace username" env:"AVIVAMYWORKPLACE_USERNAME" required:"true"`
-	Password string `short:"p" long:"password" description:"Aviva my workplace password" env:"AVIVAMYWORKPLACE_PASSWORD" required:"true"`
+	Headless        bool   `short:"e" long:"headless" description:"Headless mode" env:"HEADLESS"`
+	Username        string `short:"u" long:"username" description:"Aviva my workplace username" env:"AVIVAMYWORKPLACE_USERNAME" required:"true"`
+	Password        string `short:"p" long:"password" description:"Aviva my workplace password" env:"AVIVAMYWORKPLACE_PASSWORD" required:"true"`
+	Otppath         string `short:"o" long:"otppath" description:"Path to file containing one time password message" default:"otp/aviva" env:"OTP_PATH"`
+	Otpcommand      string `short:"c" long:"otpcommand" description:"Command to get one time password" env:"OTP_COMMAND"`
+	Otpcleancommand string `short:"l" long:"otpcleancommand" description:"Command to clean previous one time password" env:"OTP_CLEANCOMMAND"`
 }
 
 var options Options
@@ -40,6 +43,10 @@ func main() {
 	//
 	page := utils.StartCamoufox(options.Headless)
 	defer utils.Finish(page)
+
+	// clean from any previous run
+	//
+	utils.CleanOTP(options.Otpcleancommand, options.Otpcleancommand)
 
 	// main page & login
 	//
@@ -68,6 +75,30 @@ func main() {
 	err = page.GetByText("Log in", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click()
 	if err != nil {
 		panic(fmt.Sprintf("could not click: %v", err))
+	}
+
+	// attempt to fetch one time password if needed
+	//
+	utils.FetchOTP(options.Otpcommand)
+
+	// check/poll if otp/aviva exists ... could be via the above command or pushed here elsewhere
+	//
+	otp := utils.PollOTP(options.Otppath)
+
+	if otp != "" {
+		log.Println("otp=" + string(otp))
+
+		err = page.Locator("#verificationCode").Fill(otp)
+		if err != nil {
+			panic(fmt.Sprintf("could not set otp: %v", err))
+		}
+
+		err = page.Locator("#VerifyMFA").Click()
+		if err != nil {
+			panic(fmt.Sprintf("could not click otp: %v", err))
+		}
+	} else {
+		panic("could not get one time password")
 	}
 
 	// click through
