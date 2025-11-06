@@ -114,7 +114,7 @@ func screenshot(headless bool, username string, password string, url string, css
 	if err != nil {
 		return fmt.Errorf("could not get password: %v", err)
 	}
-	err = page.Locator("[type=button]").Click()
+	err = page.GetByText("Log in", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click()
 	if err != nil {
 		return fmt.Errorf("could not click: %v", err)
 	}
