@@ -8,6 +8,8 @@ import (
 	"net/http/cgi"
 	"os"
 	"os/exec"
+
+	"github.com/juju/fslock"
 )
 
 type Email struct {
@@ -18,6 +20,14 @@ type Email struct {
 // simple logger for smtp2go
 
 func CGIHandler(rw http.ResponseWriter, req *http.Request) {
+
+	// ensure we handle these sequentially
+	lock := fslock.New("/var/log/smtp2go/smtp2go.log")
+	lockErr := lock.Lock()
+	if lockErr != nil {
+		panic(fmt.Sprintf("File lock failed %v\n", lockErr))
+	}
+	defer lock.Unlock()
 
 	rw.Header().Set("Content-Type", "text/plain")
 	rw.WriteHeader(http.StatusOK)
