@@ -54,27 +54,29 @@ func CGIHandler(rw http.ResponseWriter, req *http.Request) {
 	var email Email
 	err = json.Unmarshal([]byte(string(body)), &email)
 	if err == nil {
-		cmd := exec.Command("/usr/bin/mosquitto_pub", "-r", "-t", "homeassistant/sensor/smtp/"+email.Email_id+"/config", "-m", "{"+
-			"\"name\": \"email-mqtt-"+email.Email_id+"\","+
-			"\"icon\": \"mdi:email\","+
-			"\"expire_after\": 2628000,"+
-			"\"state_topic\": \"homeassistant/sensor/smtp/"+email.Email_id+"/state\","+
-			"\"json_attributes_topic\": \"homeassistant/sensor/smtp/"+email.Email_id+"/attributes\"}")
-		out, cmderr := cmd.CombinedOutput()
-		if cmderr != nil {
-			fmt.Fprintf(logf, "Exec %v %s\n", cmderr, out)
-		}
+		if email.Event != "processed" {
+			cmd := exec.Command("/usr/bin/mosquitto_pub", "-r", "-t", "homeassistant/sensor/smtp/"+email.Email_id+"/config", "-m", "{"+
+				"\"name\": \"email-mqtt-"+email.Email_id+"\","+
+				"\"icon\": \"mdi:email\","+
+				"\"expire_after\": 2628000,"+
+				"\"state_topic\": \"homeassistant/sensor/smtp/"+email.Email_id+"/state\","+
+				"\"json_attributes_topic\": \"homeassistant/sensor/smtp/"+email.Email_id+"/attributes\"}")
+			out, cmderr := cmd.CombinedOutput()
+			if cmderr != nil {
+				fmt.Fprintf(logf, "Exec %v %s\n", cmderr, out)
+			}
 
-		cmd = exec.Command("/usr/bin/mosquitto_pub", "-r", "-t", "homeassistant/sensor/smtp/"+email.Email_id+"/state", "-m", email.Event)
-		out, cmderr = cmd.CombinedOutput()
-		if cmderr != nil {
-			fmt.Fprintf(logf, "Exec %v %s\n", cmderr, out)
-		}
+			cmd = exec.Command("/usr/bin/mosquitto_pub", "-r", "-t", "homeassistant/sensor/smtp/"+email.Email_id+"/state", "-m", email.Event)
+			out, cmderr = cmd.CombinedOutput()
+			if cmderr != nil {
+				fmt.Fprintf(logf, "Exec %v %s\n", cmderr, out)
+			}
 
-		cmd = exec.Command("/usr/bin/mosquitto_pub", "-r", "-t", "homeassistant/sensor/smtp/"+email.Email_id+"/attributes", "-m", string(body))
-		out, cmderr = cmd.CombinedOutput()
-		if cmderr != nil {
-			fmt.Fprintf(logf, "Exec %v %s\n", cmderr, out)
+			cmd = exec.Command("/usr/bin/mosquitto_pub", "-r", "-t", "homeassistant/sensor/smtp/"+email.Email_id+"/attributes", "-m", string(body))
+			out, cmderr = cmd.CombinedOutput()
+			if cmderr != nil {
+				fmt.Fprintf(logf, "Exec %v %s\n", cmderr, out)
+			}
 		}
 	} else {
 		panic(fmt.Sprintf("Unmarshal %v\n", err))
