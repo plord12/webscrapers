@@ -28,7 +28,8 @@ import (
 	"github.com/playwright-community/playwright-go"
 )
 
-const camoufoxVer = "132.0.2-beta.17"
+// const camoufoxVer = "132.0.2-beta.17"
+const camoufoxVer = "135.0.1-beta.24"
 const launchVer = "v0.0.1-alpha"
 
 const userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9"
