@@ -47,11 +47,11 @@ func main() {
 		panic(fmt.Sprintf("could not goto url: %v", err))
 	}
 
-	err = page.Locator("#id_username").Fill(options.Username)
+	err = page.Locator("#id_auth-username").Fill(options.Username)
 	if err != nil {
 		panic(fmt.Sprintf("could not get username: %v", err))
 	}
-	err = page.Locator("#id_password").Fill(options.Password)
+	err = page.Locator("#id_auth-password").Fill(options.Password)
 	if err != nil {
 		panic(fmt.Sprintf("could not get password: %v", err))
 	}
@@ -60,9 +60,9 @@ func main() {
 		panic(fmt.Sprintf("could not click: %v", err))
 	}
 
-	err = page.GetByText("Claim rewards").First().Click()
+	err = page.GetByText("Octoplus").First().Click()
 	if err != nil {
-		panic("Could not find first Claim rewards")
+		panic("Could not find first Octoplus")
 	}
 	page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{State: playwright.LoadStateLoad})
 
@@ -74,12 +74,24 @@ func main() {
 	time.Sleep(1 * time.Second)
 	page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{State: playwright.LoadStateLoad})
 
-	offers, err := page.Locator("h3").All()
+	offers, err := page.Locator("a").GetByText("Reveal offer").All()
 	if err != nil {
-		panic("Could not find offer descriptions")
+		panic("Could not find offers")
 	}
 	for _, offer := range offers {
-		fmt.Println(offer.First().TextContent())
+		offer.Click()
+		time.Sleep(1 * time.Second)
+		page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{State: playwright.LoadStateLoad})
+		h1s, err := page.Locator("h1").All()
+		if err != nil {
+			panic("Could not find h1")
+		}
+		for _, h1 := range h1s {
+			text, err := h1.TextContent()
+			if err == nil && text != "Octoplus" {
+				fmt.Println(text)
+			}
+		}
 	}
 
 	bufio.NewWriter(os.Stdout).Flush()
