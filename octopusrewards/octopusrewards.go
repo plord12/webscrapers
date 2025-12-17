@@ -10,6 +10,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/jessevdk/go-flags"
@@ -73,24 +74,38 @@ func main() {
 	page.GetByText("All Offers")
 	time.Sleep(1 * time.Second)
 	page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{State: playwright.LoadStateLoad})
+	baseurl := page.URL()
 
-	offers, err := page.Locator("a").GetByText("Reveal offer").All()
+	offers, err := page.Locator("a").All()
 	if err != nil {
-		panic("Could not find offers")
+		panic("Could not find links")
 	}
 	for _, offer := range offers {
-		offer.Click()
-		time.Sleep(1 * time.Second)
-		page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{State: playwright.LoadStateLoad})
-		h1s, err := page.Locator("h1").All()
-		if err != nil {
-			panic("Could not find h1")
-		}
-		for _, h1 := range h1s {
-			text, err := h1.TextContent()
-			if err == nil && text != "Octoplus" {
-				fmt.Println(text)
+		href, err := offer.GetAttribute("href")
+		if err == nil && strings.Contains(href, "/partner/") {
+			text, _ := offer.InnerText()
+			offer.Click()
+			time.Sleep(1 * time.Second)
+			page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{State: playwright.LoadStateLoad})
+			headings, err := page.Locator("h1").All()
+			if err != nil {
+				panic("Could not find h1")
 			}
+			if len(headings) < 2 {
+				headings, err = page.Locator("h2").All()
+				if err != nil {
+					panic("Could not find h2")
+				}
+			}
+			for _, h1 := range headings {
+				content, err := h1.TextContent()
+				if err == nil && content != "Octoplus" {
+					fmt.Println(text + ": " + content)
+				}
+			}
+			page.Goto(baseurl)
+			time.Sleep(1 * time.Second)
+			page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{State: playwright.LoadStateLoad})
 		}
 	}
 
