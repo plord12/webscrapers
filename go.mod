@@ -7,7 +7,7 @@ require (
 	github.com/go-rod/rod v0.116.2
 	github.com/go-rod/stealth v0.4.9
 	github.com/jessevdk/go-flags v1.6.1
-	github.com/jonfriesen/playwright-go-stealth v0.0.2
+	github.com/jonfriesen/playwright-go-stealth v0.0.3
 	github.com/juju/fslock v0.0.0-20160525022230-4d5c94c67b4b
 	github.com/otiai10/gosseract/v2 v2.4.1
 	github.com/playwright-community/playwright-go v0.5200.1

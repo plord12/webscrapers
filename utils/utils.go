@@ -170,7 +170,7 @@ func StartChromium(headless bool) playwright.Page {
 
 	err := playwright.Install(&playwright.RunOptions{Browsers: []string{"chromium"}})
 	if err != nil {
-		panic(fmt.Sprintf("could not install playwright: %v", err))
+		panic(fmt.Sprintf("could not install playwright: % v", err))
 	}
 	pw, err := playwright.Run()
 	if err != nil {
@@ -181,14 +181,14 @@ func StartChromium(headless bool) playwright.Page {
 		panic(fmt.Sprintf("could not launch Chromium: %v", err))
 	}
 
-	page, err := browser.NewPage(playwright.BrowserNewPageOptions{RecordVideo: &playwright.RecordVideo{Dir: "videos/"}, UserAgent: playwright.String(userAgent)})
+	page, err := browser.NewPage(playwright.BrowserNewPageOptions{UserAgent: playwright.String(userAgent)})
 	if err != nil {
 		panic(fmt.Sprintf("could not create page: %v", err))
 	}
 
 	// Inject stealth script
 	//
-	err = stealth.Inject(page)
+	err = stealth.InjectWithOptions(page, stealth.Options{ChromeStealth: true})
 	if err != nil {
 		panic(fmt.Sprintf("could not inject stealth script: %v", err))
 	}
