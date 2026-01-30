@@ -46,7 +46,7 @@ func main() {
 
 	// setup
 	//
-	page := utils.StartChromium(options.Headless)
+	page := utils.StartCamoufox(options.Headless)
 	defer utils.Finish(page)
 
 	// main page & login
