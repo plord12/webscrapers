@@ -386,7 +386,8 @@ testfacebook: ${BINDIR}/${FACEBOOK_NAME}
 
 testeventbrite: ${BINDIR}/${EVENTBRITE_NAME}
 	${BINDIR}/${EVENTBRITE_NAME} --help
-	${BINDIR}/${EVENTBRITE_NAME} --headless
+	${BINDIR}/${EVENTBRITE_NAME} --headless --maxpage=2 --format=list
+	${BINDIR}/${EVENTBRITE_NAME} --headless --maxpage=2 --format=table
 
 clean:
 	@go clean

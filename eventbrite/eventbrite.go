@@ -26,6 +26,8 @@ type Options struct {
 	Date      string `short:"d" long:"date" description:"Date" default:"next-month" env:"DATE"`
 	Price     string `short:"p" long:"price" description:"Price" default:"free" env:"PRICE"`
 	Nighttime bool   `short:"n" long:"nighttime" description:"Include nighttime events" env:"NIGHTTIME"`
+	Maxpage   int    `short:"m" long:"maxpage" description:"Max page number to fetch" default:"1000" env:"MAXPAGE"`
+	Format    string `short:"f" long:"format" description:"Format - list or table" default:"list" env:"FORMAT"`
 }
 
 var options Options
@@ -63,6 +65,10 @@ func main() {
 	// loop through all pages until we get nothing more ... store results in array for later sorting
 	//
 	for {
+		if ebPage > options.Maxpage {
+			break
+		}
+
 		url := "https://www.eventbrite.com/d/online/" + options.Price + "--" + options.Category + "--events--" + options.Date + "/?page=" + strconv.Itoa(ebPage) + "&lang=en"
 		fmt.Fprintf(os.Stderr, "Fetching %s\n", url)
 		_, err = page.Goto(url, playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
@@ -156,12 +162,20 @@ func main() {
 	fmt.Printf("	Date=%s\n", options.Date)
 	fmt.Printf("	Price=%s\n", options.Price)
 	fmt.Printf("	Nighttime=%v\n", options.Nighttime)
+	fmt.Printf("	Maxpage=%d\n", options.Maxpage)
+	fmt.Printf("	Format=%s\n", options.Format)
 	fmt.Printf("\n")
 	fmt.Printf("Below is generated wordpress source which can be cut&pasted onto your page.\n")
 	fmt.Printf("Switch to the `Code editor` (top right menu), paste then switch back to `Visual editor`.\n")
 	fmt.Printf("\n")
 
-	fmt.Printf("<!-- wp:list --><ul class=\"wp-block-list\">\n")
+	if options.Format == "list" {
+		fmt.Printf("<!-- wp:list --><ul class=\"wp-block-list\">\n")
+	} else {
+		fmt.Printf("<!-- wp:table {\"hasFixedLayout\":false,\"align\":\"left\",\"className\":\"is-style-regular\"} -->\n")
+		fmt.Printf("<figure class=\"wp-block-table alignleft is-style-regular\">\n")
+		fmt.Printf("<table><thead><tr><th>Date</th><th>Event &amp; Link</th></tr></thead><tbody>\n")
+	}
 	sort.Slice(listEvents, func(i, j int) bool {
 		return listEvents[i].Sort < listEvents[j].Sort
 	})
@@ -171,11 +185,20 @@ func main() {
 				continue
 			}
 		}
-		fmt.Printf("<!-- wp:list-item -->\n")
-		fmt.Printf("<li>%s <a href=\"%s\">%s</a></li>\n", event.Date, event.Link, event.Name)
-		fmt.Printf("<!-- /wp:list-item -->\n")
+		if options.Format == "list" {
+			fmt.Printf("<!-- wp:list-item -->\n")
+			fmt.Printf("<li>%s <a href=\"%s\">%s</a></li>\n", event.Date, event.Link, event.Name)
+			fmt.Printf("<!-- /wp:list-item -->\n")
+		} else {
+			fmt.Printf("<tr><td>%s</td><td><a href=\"%s\">%s</a></td></tr>\n", event.Date, event.Link, event.Name)
+		}
 	}
-	fmt.Printf("</ul><!-- /wp:list -->\n")
+	if options.Format == "list" {
+		fmt.Printf("</ul><!-- /wp:list -->\n")
+	} else {
+		fmt.Printf("</tbody></table></figure>\n")
+		fmt.Printf("<!-- /wp:table -->\n")
+	}
 
 	bufio.NewWriter(os.Stdout).Flush()
 }
