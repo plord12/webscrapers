@@ -105,19 +105,19 @@ func main() {
 			link, err := event.Locator(".event-card-link").First().GetAttribute("href")
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Could not find link ... skipping\n")
-				break
+				continue
 			}
 			text, err := event.Locator(".event-card-link").First().TextContent()
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Could not find text ... skipping\n")
-				break
+				continue
 			}
 			// fmt.Fprintf(os.Stderr, "Found '%s' at '%s'\n", text, link)
 
 			paragraphs, err := event.Locator("p").All()
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Could not find date ... skipping\n")
-				break
+				continue
 			}
 
 			date := ""
@@ -129,7 +129,7 @@ func main() {
 			}
 			if date == "" {
 				fmt.Fprintf(os.Stderr, "Could not find date ... skipping\n")
-				break
+				continue
 			}
 
 			// parse date into sort key
@@ -139,7 +139,7 @@ func main() {
 			t, err := time.Parse("Mon, Jan 2 3:04 PM", d)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Could not parse date '%s' ... skipping\n", d)
-				break
+				continue
 			}
 			t = t.AddDate(time.Now().Year(), 0, 0)
 			listEvents = append(listEvents, Event{Sort: t.Unix(), Name: text, Date: d, Link: link})
@@ -158,6 +158,7 @@ func main() {
 	fmt.Printf("	Nighttime=%v\n", options.Nighttime)
 	fmt.Printf("\n")
 	fmt.Printf("Below is generated wordpress source which can be cut&pasted onto your page.\n")
+	fmt.Printf("Switch to the `Code editor` (top right menu), paste then switch back to `Visual editor`.\n")
 	fmt.Printf("\n")
 
 	fmt.Printf("<!-- wp:list --><ul class=\"wp-block-list\">\n")
@@ -167,7 +168,7 @@ func main() {
 	for _, event := range listEvents {
 		if !options.Nighttime {
 			if time.Unix(event.Sort, 0).Hour() < 8 || time.Unix(event.Sort, 0).Hour() > 20 {
-				break
+				continue
 			}
 		}
 		fmt.Printf("<!-- wp:list-item -->\n")
