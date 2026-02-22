@@ -50,11 +50,11 @@ func main() {
 	}
 
 	log.Printf("Logging in\n")
-	err = page.Locator("#id_username").Fill(options.Username)
+	err = page.Locator("#id_auth-username").Fill(options.Username)
 	if err != nil {
 		panic(fmt.Sprintf("could not get username: %v", err))
 	}
-	err = page.Locator("#id_password").Fill(options.Password)
+	err = page.Locator("#id_auth-password").Fill(options.Password)
 	if err != nil {
 		panic(fmt.Sprintf("could not get password: %v", err))
 	}
