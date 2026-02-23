@@ -8,6 +8,8 @@ import (
 	"net/http/cgi"
 	"os"
 	"os/exec"
+	"regexp"
+	"strings"
 
 	"github.com/juju/fslock"
 )
@@ -15,6 +17,7 @@ import (
 type Email struct {
 	Email_id string
 	Event    string
+	Rcpt     string
 }
 
 // simple logger for smtp2go
@@ -55,24 +58,29 @@ func CGIHandler(rw http.ResponseWriter, req *http.Request) {
 	err = json.Unmarshal([]byte(string(body)), &email)
 	if err == nil {
 		if email.Event != "processed" {
-			cmd := exec.Command("/usr/bin/mosquitto_pub", "-r", "-t", "homeassistant/sensor/smtp/"+email.Email_id+"/config", "-m", "{"+
-				"\"name\": \"email-mqtt-"+email.Email_id+"\","+
+			key := email.Email_id + "-" + strings.ReplaceAll(strings.ReplaceAll(email.Rcpt, "@", "-"), ".", "-")
+
+			cmd := exec.Command("/usr/bin/mosquitto_pub", "-r", "-t", "homeassistant/sensor/smtp/"+key+"/config", "-m", "{"+
+				"\"name\": \"email-mqtt-"+key+"\","+
 				"\"icon\": \"mdi:email\","+
 				"\"expire_after\": 2628000,"+
-				"\"state_topic\": \"homeassistant/sensor/smtp/"+email.Email_id+"/state\","+
-				"\"json_attributes_topic\": \"homeassistant/sensor/smtp/"+email.Email_id+"/attributes\"}")
+				"\"state_topic\": \"homeassistant/sensor/smtp/"+key+"/state\","+
+				"\"json_attributes_topic\": \"homeassistant/sensor/smtp/"+key+"/attributes\"}")
 			out, cmderr := cmd.CombinedOutput()
 			if cmderr != nil {
 				fmt.Fprintf(logf, "Exec %v %s\n", cmderr, out)
 			}
 
-			cmd = exec.Command("/usr/bin/mosquitto_pub", "-r", "-t", "homeassistant/sensor/smtp/"+email.Email_id+"/state", "-m", email.Event)
+			cmd = exec.Command("/usr/bin/mosquitto_pub", "-r", "-t", "homeassistant/sensor/smtp/"+key+"/state", "-m", email.Event)
 			out, cmderr = cmd.CombinedOutput()
 			if cmderr != nil {
 				fmt.Fprintf(logf, "Exec %v %s\n", cmderr, out)
 			}
 
-			cmd = exec.Command("/usr/bin/mosquitto_pub", "-r", "-t", "homeassistant/sensor/smtp/"+email.Email_id+"/attributes", "-m", string(body))
+			var re = regexp.MustCompile("^{")
+			s := re.ReplaceAllString(string(body), "${1}\"topic\":\""+"homeassistant/sensor/smtp/"+key+"\",")
+
+			cmd = exec.Command("/usr/bin/mosquitto_pub", "-r", "-t", "homeassistant/sensor/smtp/"+key+"/attributes", "-m", s)
 			out, cmderr = cmd.CombinedOutput()
 			if cmderr != nil {
 				fmt.Fprintf(logf, "Exec %v %s\n", cmderr, out)
