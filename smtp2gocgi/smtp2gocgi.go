@@ -78,7 +78,7 @@ func CGIHandler(rw http.ResponseWriter, req *http.Request) {
 			}
 
 			var re = regexp.MustCompile("^{")
-			s := re.ReplaceAllString(string(body), "${1}\"topic\":\""+"homeassistant/sensor/smtp/"+key+"\",")
+			s := re.ReplaceAllString(string(body), "{\"topic\":\""+"homeassistant/sensor/smtp/"+key+"\",")
 
 			cmd = exec.Command("/usr/bin/mosquitto_pub", "-r", "-t", "homeassistant/sensor/smtp/"+key+"/attributes", "-m", s)
 			out, cmderr = cmd.CombinedOutput()
