@@ -180,6 +180,7 @@ func main() {
 			//
 			if !options.Nighttime {
 				if time.Unix(t.Unix(), 0).Hour() < 8 || time.Unix(t.Unix(), 0).Hour() > 20 {
+					fmt.Fprintf(os.Stderr, "Skipped due to nightime event\n")
 					eventsSkippedByNightTime++
 					continue
 				}
