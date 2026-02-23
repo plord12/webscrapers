@@ -386,7 +386,7 @@ testfacebook: ${BINDIR}/${FACEBOOK_NAME}
 
 testeventbrite: ${BINDIR}/${EVENTBRITE_NAME}
 	${BINDIR}/${EVENTBRITE_NAME} --help
-	${BINDIR}/${EVENTBRITE_NAME} --headless --maxpage=2 --format=list
+	${BINDIR}/${EVENTBRITE_NAME} --headless --maxpage=1 --format=list --exclude "Primary School" --exclude "Secondary School" --exclude GCSE --exclude "A-Level" --exclude "Undergraduate Workshop" --exclude "Curriculum Session" --exclude "School Outreach"
 	${BINDIR}/${EVENTBRITE_NAME} --headless --maxpage=2 --format=table
 
 clean:

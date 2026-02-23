@@ -18,16 +18,19 @@ import (
 	"github.com/jessevdk/go-flags"
 	"github.com/playwright-community/playwright-go"
 	"github.com/plord12/webscrapers/utils"
+	"golang.org/x/text/language"
+	"golang.org/x/text/search"
 )
 
 type Options struct {
-	Headless  bool   `short:"e" long:"headless" description:"Headless mode" env:"HEADLESS"`
-	Category  string `short:"c" long:"category" description:"Category" default:"science-and-tech" env:"CATEGORY"`
-	Date      string `short:"d" long:"date" description:"Date" default:"next-month" env:"DATE"`
-	Price     string `short:"p" long:"price" description:"Price" default:"free" env:"PRICE"`
-	Nighttime bool   `short:"n" long:"nighttime" description:"Include nighttime events" env:"NIGHTTIME"`
-	Maxpage   int    `short:"m" long:"maxpage" description:"Max page number to fetch" default:"1000" env:"MAXPAGE"`
-	Format    string `short:"f" long:"format" description:"Format - list or table" default:"list" env:"FORMAT"`
+	Headless  bool     `short:"e" long:"headless" description:"Headless mode" env:"HEADLESS"`
+	Category  string   `short:"c" long:"category" description:"Category" default:"science-and-tech" env:"CATEGORY"`
+	Date      string   `short:"d" long:"date" description:"Date" default:"next-month" env:"DATE"`
+	Price     string   `short:"p" long:"price" description:"Price" default:"free" env:"PRICE"`
+	Nighttime bool     `short:"n" long:"nighttime" description:"Include nighttime events" env:"NIGHTTIME"`
+	Maxpage   int      `short:"m" long:"maxpage" description:"Max page number to fetch" default:"1000" env:"MAXPAGE"`
+	Format    string   `short:"f" long:"format" description:"Format - list or table" default:"list" env:"FORMAT"`
+	Exclude   []string `short:"x" long:"exclude" description:"Exclude - list of keywords to exclude" env:"EXCLUDE"`
 }
 
 var options Options
@@ -44,13 +47,14 @@ func main() {
 
 	// setup
 	//
-	page := utils.StartChromium(options.Headless)
+	page := utils.StartCamoufox(options.Headless)
 	defer utils.Finish(page)
 
 	// main page
 	//
 	// FIX THIS - allow multiple passes & remove duplicates
-	//
+	// FIX THIS - allow "low cost" ... not free but say less that £20/$20/€20
+	// FIX THIS - allow shorter times (1 week / 2 weeks)
 
 	type Event struct {
 		Sort int64
@@ -61,6 +65,13 @@ func main() {
 	var listEvents []Event
 
 	ebPage := 1
+
+	// stats
+	//
+	eventsFound := 0
+	eventsSkippedByTitle := 0
+	eventsSkippedByDescription := 0
+	eventsErrors := 0
 
 	// loop through all pages until we get nothing more ... store results in array for later sorting
 	//
@@ -75,6 +86,10 @@ func main() {
 		if err != nil {
 			panic(fmt.Sprintf("could not goto url: %v", err))
 		}
+
+		// reject cookie
+		//
+		page.GetByText("Reject all", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click(playwright.LocatorClickOptions{Timeout: playwright.Float(2000.0)})
 
 		events, err := page.Locator(".event-card-details").Filter(playwright.LocatorFilterOptions{Visible: playwright.Bool(true)}).All()
 		if err != nil {
@@ -108,21 +123,25 @@ func main() {
 		}
 
 		for _, event := range events {
+			eventsFound++
 			link, err := event.Locator(".event-card-link").First().GetAttribute("href")
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Could not find link ... skipping\n")
+				eventsErrors++
 				continue
 			}
-			text, err := event.Locator(".event-card-link").First().TextContent()
+			title, err := event.Locator(".event-card-link").First().TextContent()
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Could not find text ... skipping\n")
+				eventsErrors++
 				continue
 			}
-			// fmt.Fprintf(os.Stderr, "Found '%s' at '%s'\n", text, link)
+			fmt.Fprintf(os.Stderr, "Found '%s' at '%s'\n", title, link)
 
 			paragraphs, err := event.Locator("p").All()
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Could not find date ... skipping\n")
+				eventsErrors++
 				continue
 			}
 
@@ -135,6 +154,7 @@ func main() {
 			}
 			if date == "" {
 				fmt.Fprintf(os.Stderr, "Could not find date ... skipping\n")
+				eventsErrors++
 				continue
 			}
 
@@ -145,10 +165,80 @@ func main() {
 			t, err := time.Parse("Mon, Jan 2 3:04 PM", d)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Could not parse date '%s' ... skipping\n", d)
+				eventsErrors++
 				continue
 			}
 			t = t.AddDate(time.Now().Year(), 0, 0)
-			listEvents = append(listEvents, Event{Sort: t.Unix(), Name: text, Date: d, Link: link})
+
+			// exclude by date
+
+			// exclude by keyword in title
+			//
+			skipped := false
+			if len(options.Exclude) > 0 {
+				m := search.New(language.English, search.IgnoreCase)
+				for _, keyword := range options.Exclude {
+					start, _ := m.IndexString(title, keyword)
+					if start != -1 {
+						fmt.Fprintf(os.Stderr, "Skipped due to %s match\n", keyword)
+						eventsSkippedByTitle++
+						skipped = true
+						continue
+					}
+				}
+				if skipped {
+					continue
+				}
+
+				// exclude by keyword in description
+				//
+				newContext, err := page.Context().Browser().NewContext()
+				if err != nil {
+					panic(fmt.Sprintf("could not open new page: %v", err))
+				}
+				page2, err := newContext.NewPage()
+				if err != nil {
+					panic(fmt.Sprintf("could not open new page: %v", err))
+				}
+				_, err = page2.Goto(link, playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Could not open '%s' ... skipping\n", link)
+					eventsErrors++
+					page2.Close()
+					continue
+				}
+				// reject cookie
+				//
+				page2.GetByText("Reject all", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click(playwright.LocatorClickOptions{Timeout: playwright.Float(2000.0)})
+
+				// expand text
+				//
+				page.GetByText("Read more", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click(playwright.LocatorClickOptions{Timeout: playwright.Float(2000.0)})
+				description, err := page2.GetByTestId("section-wrapper-overview").First().InnerText()
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Could not read '%s' ... skipping\n", link)
+					eventsErrors++
+					page2.Close()
+					continue
+				}
+				//fmt.Fprintf(os.Stderr, "Description '%s'\n", description)
+				page2.Close()
+				m = search.New(language.English, search.IgnoreCase)
+				for _, keyword := range options.Exclude {
+					start, _ := m.IndexString(description, keyword)
+					if start != -1 {
+						fmt.Fprintf(os.Stderr, "Skipped due to %s match\n", keyword)
+						eventsSkippedByDescription++
+						skipped = true
+						continue
+					}
+				}
+				if skipped {
+					continue
+				}
+			}
+
+			listEvents = append(listEvents, Event{Sort: t.Unix(), Name: title, Date: d, Link: link})
 		}
 
 		ebPage++
@@ -164,7 +254,9 @@ func main() {
 	fmt.Printf("	Nighttime=%v\n", options.Nighttime)
 	fmt.Printf("	Maxpage=%d\n", options.Maxpage)
 	fmt.Printf("	Format=%s\n", options.Format)
+	fmt.Printf("	Exclude=%s\n", strings.Join(options.Exclude, ","))
 	fmt.Printf("\n")
+	fmt.Printf("There were %d events found.  Of which, %d were skipped due to exclude title match, %d were skipped due to exclude description match and %d errors.\n\n", eventsFound, eventsSkippedByTitle, eventsSkippedByDescription, eventsErrors)
 	fmt.Printf("Below is generated wordpress source which can be cut&pasted onto your page.\n")
 	fmt.Printf("Switch to the `Code editor` (top right menu), paste then switch back to `Visual editor`.\n")
 	fmt.Printf("\n")
