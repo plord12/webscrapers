@@ -71,6 +71,7 @@ func main() {
 	eventsFound := 0
 	eventsSkippedByTitle := 0
 	eventsSkippedByDescription := 0
+	eventsSkippedByNightTime := 0
 	eventsErrors := 0
 
 	// loop through all pages until we get nothing more ... store results in array for later sorting
@@ -161,6 +162,11 @@ func main() {
 			// parse date into sort key
 			//
 			d := strings.ReplaceAll(strings.ReplaceAll(date, "  ", " "), " • ", " ")
+			if len(strings.Split(d, " ")) < 6 {
+				fmt.Fprintf(os.Stderr, "Could not parse date '%s' ... skipping\n", d)
+				eventsErrors++
+				continue
+			}
 			d = strings.Join(strings.Split(d, " ")[0:5], " ")
 			t, err := time.Parse("Mon, Jan 2 3:04 PM", d)
 			if err != nil {
@@ -169,6 +175,15 @@ func main() {
 				continue
 			}
 			t = t.AddDate(time.Now().Year(), 0, 0)
+
+			// exclude by night time
+			//
+			if !options.Nighttime {
+				if time.Unix(t.Unix(), 0).Hour() < 8 || time.Unix(t.Unix(), 0).Hour() > 20 {
+					eventsSkippedByNightTime++
+					continue
+				}
+			}
 
 			// exclude by date
 
@@ -244,7 +259,7 @@ func main() {
 		ebPage++
 	}
 
-	// sort, filter & display
+	// sort & display
 	//
 	fmt.Printf("eventbrite has been run with the following options :\n")
 	fmt.Printf("	Headless=%v\n", options.Headless)
@@ -256,7 +271,12 @@ func main() {
 	fmt.Printf("	Format=%s\n", options.Format)
 	fmt.Printf("	Exclude=%s\n", strings.Join(options.Exclude, ","))
 	fmt.Printf("\n")
-	fmt.Printf("There were %d events found.  Of which, %d were skipped due to exclude title match, %d were skipped due to exclude description match and %d errors.\n\n", eventsFound, eventsSkippedByTitle, eventsSkippedByDescription, eventsErrors)
+	fmt.Printf("There were %d events found.  Of which :\n", eventsFound)
+	fmt.Printf("	%d were skipped due to exclude title match\n", eventsSkippedByTitle)
+	fmt.Printf("	%d were skipped due to exclude description match\n", eventsSkippedByDescription)
+	fmt.Printf("	%d were skipped due to nighttime\n", eventsSkippedByNightTime)
+	fmt.Printf("	%d errors\n", eventsErrors)
+	fmt.Printf("\n")
 	fmt.Printf("Below is generated wordpress source which can be cut&pasted onto your page.\n")
 	fmt.Printf("Switch to the `Code editor` (top right menu), paste then switch back to `Visual editor`.\n")
 	fmt.Printf("\n")
@@ -272,11 +292,6 @@ func main() {
 		return listEvents[i].Sort < listEvents[j].Sort
 	})
 	for _, event := range listEvents {
-		if !options.Nighttime {
-			if time.Unix(event.Sort, 0).Hour() < 8 || time.Unix(event.Sort, 0).Hour() > 20 {
-				continue
-			}
-		}
 		if options.Format == "list" {
 			fmt.Printf("<!-- wp:list-item -->\n")
 			fmt.Printf("<li>%s <a href=\"%s\">%s</a></li>\n", event.Date, event.Link, event.Name)
