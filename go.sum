@@ -135,6 +135,8 @@ github.com/juju/fslock v0.0.0-20160525022230-4d5c94c67b4b h1:FQ7+9fxhyp82ks9vAuy
 github.com/juju/fslock v0.0.0-20160525022230-4d5c94c67b4b/go.mod h1:HMcgvsgd0Fjj4XXDkbjdmlbI505rUPBs6WBMYg2pXks=
 github.com/klauspost/cpuid/v2 v2.3.0 h1:S4CRMLnYUhGeDFDqkGriYKdfoFlDnMtqTiI/sFzhA9Y=
 github.com/klauspost/cpuid/v2 v2.3.0/go.mod h1:hqwkgyIinND0mEev00jJYCxPNVRVXFQeu1XKlok6oO0=
+github.com/knights-analytics/hugot v0.6.4 h1:o82aNOgcBC3LbohjmP8ecfYFl0/nOtuGbtpvc0Nk6mM=
+github.com/knights-analytics/hugot v0.6.4/go.mod h1:ltdjG44JAz12pm/D6Mp/hCGpkyDfZv00gjgUylVuOVo=
 github.com/knights-analytics/ortgenai v0.1.0 h1:QJ57FCf+Ideo1zKojINXeDbFNeIYcd9yvzHhnuGVXZc=
 github.com/knights-analytics/ortgenai v0.1.0/go.mod h1:NsxP23iC77IP6q+gRTC+v79v3hyv7fKH1iSa7D+DoVk=
 github.com/kr/pretty v0.3.1 h1:flRD4NNwYAUpkphVc1HcthR4KEIFJ65n8Mw5qdRn3LE=
