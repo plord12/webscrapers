@@ -32,7 +32,7 @@ import (
 const camoufoxVer = "135.0.1-beta.24"
 const launchVer = "v0.0.1-alpha"
 
-const userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9"
+const userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:135.0) Gecko/20100101 Firefox/135.0"
 
 // Finish webscraping - check for errors and save video if needed
 func Finish(page playwright.Page) {
@@ -157,7 +157,7 @@ func StartCamoufox(headless bool) playwright.Page {
 	if err != nil {
 		panic(fmt.Sprintf("could not launch Camoufox: %v", err))
 	}
-	page, err := browser.NewPage(playwright.BrowserNewPageOptions{RecordVideo: &playwright.RecordVideo{Dir: "videos/"}})
+	page, err := browser.NewPage(playwright.BrowserNewPageOptions{UserAgent: playwright.String(userAgent)}, playwright.BrowserNewPageOptions{RecordVideo: &playwright.RecordVideo{Dir: "videos/"}})
 	if err != nil {
 		panic(fmt.Sprintf("could not create page: %v", err))
 	}

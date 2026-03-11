@@ -76,6 +76,10 @@ ${LINUXARM64BINDIR}:
 otp:
 	mkdir -p otp
 
+update:
+	go get -u ./...
+	go mod tidy
+
 release: release-ha_ss_addon release-launch-linux-arm64 release-launch-linux-amd64 release-launch-darwin-arm64 release-launch-windows-amd64 release-webscrapers-linux-arm64 release-webscrapers-linux-amd64 release-webscrapers-darwin-arm64 release-webscrapers-windows-amd64
 
 release-ha_ss_addon: ${LINUXARM64BINDIR}/${HA_SS_NAME}  ${LINUXAMD64BINDIR}/${HA_SS_NAME}
@@ -309,9 +313,11 @@ ${WINDOWSAMD64BINDIR}/${FACEBOOK_NAME}.exe: ${FACEBOOK_SOURCE}
 	GOARCH=amd64 GOOS=windows go build -o $@ $<
 
 # eventbrite
-#
-${BINDIR}/${EVENTBRITE_NAME}: ${EVENTBRITE_SOURCE} ${UTILS_SOURCE}
-	go build -o $@ $<
+tokenizers/libtokenizers.a:
+	git clone https://github.com/daulet/tokenizers
+	cd tokenizers; make build
+${BINDIR}/${EVENTBRITE_NAME}: ${EVENTBRITE_SOURCE} ${UTILS_SOURCE} tokenizers/libtokenizers.a
+	CGO_LDFLAGS=-Ltokenizers go build -tags ORT,XLA -o $@ $<
 ${LINUXARM64BINDIR}/${EVENTBRITE_NAME}: ${EVENTBRITE_SOURCE} ${UTILS_SOURCE}
 	GOARCH=arm64 GOOS=linux go build -o $@ $<
 ${LINUXAMD64BINDIR}/${EVENTBRITE_NAME}: ${EVENTBRITE_SOURCE} ${UTILS_SOURCE}
@@ -325,60 +331,60 @@ test: testha testaviva testavivamyworkplace testnutmeg testfund testmoneyfarm  t
 
 testha: ${BINDIR}/${HA_SS_NAME}
 	${BINDIR}/${HA_SS_NAME} --help
-	${BINDIR}/${HA_SS_NAME} --username "$(HA_USERNAME)" --password "$(HA_PASSWORD)" --url "$(TEST1_HA_URL)" --css "$(TEST1_HA_CSS)" --path test1.png
-	${BINDIR}/${HA_SS_NAME} --username "$(HA_USERNAME)" --password "$(HA_PASSWORD)" --url "$(TEST2_HA_URL)" --css "$(TEST2_HA_CSS)" --path test2.png
-	${BINDIR}/${HA_SS_NAME} --username "$(HA_USERNAME)" --password "$(HA_PASSWORD)" --url "$(TEST3_HA_URL)" --css "$(TEST3_HA_CSS)" --path test3.png
+	${BINDIR}/${HA_SS_NAME} --headless --username "$(HA_USERNAME)" --password "$(HA_PASSWORD)" --url "$(TEST1_HA_URL)" --css "$(TEST1_HA_CSS)" --path test1.png
+	${BINDIR}/${HA_SS_NAME} --headless --username "$(HA_USERNAME)" --password "$(HA_PASSWORD)" --url "$(TEST2_HA_URL)" --css "$(TEST2_HA_CSS)" --path test2.png
+	${BINDIR}/${HA_SS_NAME} --headless --username "$(HA_USERNAME)" --password "$(HA_PASSWORD)" --url "$(TEST3_HA_URL)" --css "$(TEST3_HA_CSS)" --path test3.png
 
 testrest:
 	${BINDIR}/${HA_SS_NAME} --username "$(HA_USERNAME)" --password "$(HA_PASSWORD)" --restport 3500
 
 testaviva: ${BINDIR}/${AVIVA_NAME}
 	${BINDIR}/${AVIVA_NAME} --help
-	${BINDIR}/${AVIVA_NAME} --username "$(AVIVA_USERNAME)" --password "$(AVIVA_PASSWORD)" --otpcleancommand "$(AVIVA_OTPCLEANCOMMAND)"  --otpcommand "$(AVIVA_OTPCOMMAND)"
+	${BINDIR}/${AVIVA_NAME} --headless --username "$(AVIVA_USERNAME)" --password "$(AVIVA_PASSWORD)" --otpcleancommand "$(AVIVA_OTPCLEANCOMMAND)"  --otpcommand "$(AVIVA_OTPCOMMAND)"
 
 testavivaselenium:
 	OTP_CLEANCOMMAND="$(AVIVA_OTPCLEANCOMMAND)" OTP_COMMAND="$(AVIVA_OTPCOMMAND)" python3 ${AVIVA_NAME}/${AVIVA_NAME}.py
 
 testavivamyworkplace: ${BINDIR}/${AVIVAMYWORKPLACE_NAME}
 	${BINDIR}/${AVIVAMYWORKPLACE_NAME} --help
-	${BINDIR}/${AVIVAMYWORKPLACE_NAME} --username "$(AVIVAMYWORKPLACE_USERNAME)" --password "$(AVIVAMYWORKPLACE_PASSWORD)" --otpcleancommand "$(AVIVA_OTPCLEANCOMMAND)"  --otpcommand "$(AVIVA_OTPCOMMAND)"
+	${BINDIR}/${AVIVAMYWORKPLACE_NAME} --headless --username "$(AVIVAMYWORKPLACE_USERNAME)" --password "$(AVIVAMYWORKPLACE_PASSWORD)" --otpcleancommand "$(AVIVA_OTPCLEANCOMMAND)"  --otpcommand "$(AVIVA_OTPCOMMAND)"
 
 testnutmeg: ${BINDIR}/${NUTMEG_NAME}
 	${BINDIR}/${NUTMEG_NAME} --help
-	${BINDIR}/${NUTMEG_NAME} --username "$(TEST1_NUTMEG_USERNAME)" --password "$(TEST1_NUTMEG_PASSWORD)" --otpcleancommand "$(NUTMEG_OTPCLEANCOMMAND)" --otpcommand "$(NUTMEG_OTPCOMMAND)"
-	${BINDIR}/${NUTMEG_NAME} --username "$(TEST2_NUTMEG_USERNAME)" --password "$(TEST2_NUTMEG_PASSWORD)" --otpcleancommand "$(NUTMEG_OTPCLEANCOMMAND)" --otpcommand "$(NUTMEG_OTPCOMMAND)"
+	${BINDIR}/${NUTMEG_NAME} --headless --username "$(TEST1_NUTMEG_USERNAME)" --password "$(TEST1_NUTMEG_PASSWORD)" --otpcleancommand "$(NUTMEG_OTPCLEANCOMMAND)" --otpcommand "$(NUTMEG_OTPCOMMAND)"
+	${BINDIR}/${NUTMEG_NAME} --headless --username "$(TEST2_NUTMEG_USERNAME)" --password "$(TEST2_NUTMEG_PASSWORD)" --otpcleancommand "$(NUTMEG_OTPCLEANCOMMAND)" --otpcommand "$(NUTMEG_OTPCOMMAND)"
 
 testfund: ${BINDIR}/${FUND_NAME}
 	${BINDIR}/${FUND_NAME} --help
-	${BINDIR}/${FUND_NAME} --fund "$(TEST1_FUND)"
-	${BINDIR}/${FUND_NAME} --fund "$(TEST2_FUND)"
-	${BINDIR}/${FUND_NAME} --fund "$(TEST3_FUND)"
+	${BINDIR}/${FUND_NAME} --headless --fund "$(TEST1_FUND)"
+	${BINDIR}/${FUND_NAME} --headless --fund "$(TEST2_FUND)"
+	${BINDIR}/${FUND_NAME} --headless --fund "$(TEST3_FUND)"
 
 testmoneyfarm: ${BINDIR}/${MONEYFARM_NAME}
 	${BINDIR}/${MONEYFARM_NAME} --help
-	${BINDIR}/${MONEYFARM_NAME} --username "$(TEST1_MONEYFARM_USERNAME)" --password "$(TEST1_MONEYFARM_PASSWORD)" --otpcleancommand "$(MONEYFARM_OTPCLEANCOMMAND)" --otpcommand "$(MONEYFARM_OTPCOMMAND)"
-	${BINDIR}/${MONEYFARM_NAME} --username "$(TEST2_MONEYFARM_USERNAME)" --password "$(TEST2_MONEYFARM_PASSWORD)" --otpcleancommand "$(MONEYFARM_OTPCLEANCOMMAND)" --otpcommand "$(MONEYFARM_OTPCOMMAND)"
+	${BINDIR}/${MONEYFARM_NAME} --headless --username "$(TEST1_MONEYFARM_USERNAME)" --password "$(TEST1_MONEYFARM_PASSWORD)" --otpcleancommand "$(MONEYFARM_OTPCLEANCOMMAND)" --otpcommand "$(MONEYFARM_OTPCOMMAND)"
+	${BINDIR}/${MONEYFARM_NAME} --headless --username "$(TEST2_MONEYFARM_USERNAME)" --password "$(TEST2_MONEYFARM_PASSWORD)" --otpcleancommand "$(MONEYFARM_OTPCLEANCOMMAND)" --otpcommand "$(MONEYFARM_OTPCOMMAND)"
 
 testmoneyhub: ${BINDIR}/${MONEYHUB_NAME}
 	${BINDIR}/${MONEYHUB_NAME} --help
 	MONEYHUB_BALANCE=$(shell ${BINDIR}/${NUTMEG_NAME} --username "$(TEST1_NUTMEG_USERNAME)" --password "$(TEST1_NUTMEG_PASSWORD)" --otpcleancommand "$(NUTMEG_OTPCLEANCOMMAND)" --otpcommand "$(NUTMEG_OTPCOMMAND)"); \
-	${BINDIR}/${MONEYHUB_NAME} --username "$(TEST1_MONEYHUB_USERNAME)" --password "$(TEST1_MONEYHUB_PASSWORD)" --account "$(TEST1_MONEYHUB_ACCOUNT)" --account "$(TEST1_MONEYHUB_ACCOUNT)" --account "$(TEST1_MONEYHUB_ACCOUNT)" --account "$(TEST1_MONEYHUB_ACCOUNT)" --account "$(TEST1_MONEYHUB_ACCOUNT)" --balance $$MONEYHUB_BALANCE --balance $$MONEYHUB_BALANCE --balance $$MONEYHUB_BALANCE --balance $$MONEYHUB_BALANCE --balance $$MONEYHUB_BALANCE
+	${BINDIR}/${MONEYHUB_NAME} --headless --username "$(TEST1_MONEYHUB_USERNAME)" --password "$(TEST1_MONEYHUB_PASSWORD)" --account "$(TEST1_MONEYHUB_ACCOUNT)" --account "$(TEST1_MONEYHUB_ACCOUNT)" --account "$(TEST1_MONEYHUB_ACCOUNT)" --account "$(TEST1_MONEYHUB_ACCOUNT)" --account "$(TEST1_MONEYHUB_ACCOUNT)" --balance $$MONEYHUB_BALANCE --balance $$MONEYHUB_BALANCE --balance $$MONEYHUB_BALANCE --balance $$MONEYHUB_BALANCE --balance $$MONEYHUB_BALANCE
 
 testoctopuswheel: ${BINDIR}/${OCTOPUSWHEEL_NAME}
 	${BINDIR}/${OCTOPUSWHEEL_NAME} --help
-	${BINDIR}/${OCTOPUSWHEEL_NAME} --username "$(TEST1_OCTOPUS_USERNAME)" --password "$(TEST1_OCTOPUS_PASSWORD)"
+	${BINDIR}/${OCTOPUSWHEEL_NAME} --headless --username "$(TEST1_OCTOPUS_USERNAME)" --password "$(TEST1_OCTOPUS_PASSWORD)"
 
 testoctopusrewards: ${BINDIR}/${OCTOPUSREWARDS_NAME}
 	${BINDIR}/${OCTOPUSREWARDS_NAME} --help
-	${BINDIR}/${OCTOPUSREWARDS_NAME} --username "$(TEST1_OCTOPUS_USERNAME)" --password "$(TEST1_OCTOPUS_PASSWORD)"
+	${BINDIR}/${OCTOPUSREWARDS_NAME} --headless --username "$(TEST1_OCTOPUS_USERNAME)" --password "$(TEST1_OCTOPUS_PASSWORD)"
 
 testmycauseuk: ${BINDIR}/${MYCAUSEUK_NAME}
 	${BINDIR}/${MYCAUSEUK_NAME} --help
-	${BINDIR}/${MYCAUSEUK_NAME} --username "$(TEST1_MYCAUSEUK_USERNAME)" --password "$(TEST1_MYCAUSEUK_PASSWORD)"
+	${BINDIR}/${MYCAUSEUK_NAME} --headless --username "$(TEST1_MYCAUSEUK_USERNAME)" --password "$(TEST1_MYCAUSEUK_PASSWORD)"
 
 testu3agroups: ${BINDIR}/${U3AGROUPS_NAME}
 	${BINDIR}/${U3AGROUPS_NAME} --help
-	${BINDIR}/${U3AGROUPS_NAME} --search "technology" --name "My Name" --email "somewhere@something.org" --subject "Test Subject" --message "Test Message"
+	${BINDIR}/${U3AGROUPS_NAME} --headless --search "technology" --name "My Name" --email "somewhere@something.org" --subject "Test Subject" --message "Test Message"
 
 testfacebook: ${BINDIR}/${FACEBOOK_NAME}
 	${BINDIR}/${FACEBOOK_NAME} --help
@@ -386,8 +392,15 @@ testfacebook: ${BINDIR}/${FACEBOOK_NAME}
 
 testeventbrite: ${BINDIR}/${EVENTBRITE_NAME}
 	${BINDIR}/${EVENTBRITE_NAME} --help
-	${BINDIR}/${EVENTBRITE_NAME} --headless --maxpage=1 --format=list --exclude "Primary School" --exclude "Secondary School" --exclude GCSE --exclude "A-Level" --exclude "Undergraduate Workshop" --exclude "Curriculum Session" --exclude "School Outreach"
-	${BINDIR}/${EVENTBRITE_NAME} --headless --maxpage=2 --format=table
+	${BINDIR}/${EVENTBRITE_NAME} --headless --maxpage=1 --format=list \
+		--include Logic --include "Pure mathematics" \
+		--exclude Economics --exclude Accounting
+	${BINDIR}/${EVENTBRITE_NAME} --headless --maxpage=1 --format=table \
+		--include Logic --include "Pure mathematics" \
+		--exclude Economics --exclude Accounting
+	${BINDIR}/${EVENTBRITE_NAME} --headless --maxpage=1 --format=tablepress \
+		--include Logic --include "Pure mathematics" \
+		--exclude Economics --exclude Accounting
 
 clean:
 	@go clean

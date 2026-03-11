@@ -7,34 +7,102 @@ find eventbrite events, output in wordpress format
 package main
 
 import (
-	"bufio"
 	"fmt"
+	"html"
 	"os"
+	"reflect"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/gildas/go-cache"
 	"github.com/jessevdk/go-flags"
+	"github.com/knights-analytics/hugot"
+	"github.com/knights-analytics/hugot/backends"
+	"github.com/knights-analytics/hugot/pipelines"
+	"github.com/lucasb-eyer/go-colorful"
+	"github.com/markusmobius/go-dateparser"
 	"github.com/playwright-community/playwright-go"
 	"github.com/plord12/webscrapers/utils"
-	"golang.org/x/text/language"
-	"golang.org/x/text/search"
 )
 
 type Options struct {
 	Headless  bool     `short:"e" long:"headless" description:"Headless mode" env:"HEADLESS"`
 	Category  string   `short:"c" long:"category" description:"Category" default:"science-and-tech" env:"CATEGORY"`
-	Date      string   `short:"d" long:"date" description:"Date" default:"next-month" env:"DATE"`
+	Date      string   `short:"d" long:"date" description:"Date" default:"next-month" default:"" env:"DATE"`
+	StartDate string   `short:"s" long:"startdate" description:"Start date (YYYY-MM-DD)" env:"STARTDATE"`
+	EndDate   string   `short:"a" long:"enddate" description:"End date (YYYY-MM-DD)" env:"ENDDATE"`
 	Price     string   `short:"p" long:"price" description:"Price" default:"free" env:"PRICE"`
 	Nighttime bool     `short:"n" long:"nighttime" description:"Include nighttime events" env:"NIGHTTIME"`
 	Maxpage   int      `short:"m" long:"maxpage" description:"Max page number to fetch" default:"1000" env:"MAXPAGE"`
-	Format    string   `short:"f" long:"format" description:"Format - list or table" default:"list" env:"FORMAT"`
-	Exclude   []string `short:"x" long:"exclude" description:"Exclude - list of keywords to exclude" env:"EXCLUDE"`
+	Format    string   `short:"f" long:"format" description:"Format - list, table or tablepress" default:"list" choice:"list" choice:"table" choice:"tablepress" env:"FORMAT"`
+	Include   []string `short:"i" long:"include" description:"Include - list of categories to include" env:"INCLUDE"`
+	Exclude   []string `short:"x" long:"exclude" description:"Exclude - list of categories to exclude" env:"EXCLUDE"`
+	Clear     bool     `short:"z" long:"clear" description:"Clear the cache ... eg change in categories" env:"CLEAR"`
+	Save      string   `short:"v" long:"save" description:"Filename to save output to" env:"SAVE"`
 }
 
-var options Options
-var parser = flags.NewParser(&options, flags.Default)
+var cliOptions Options
+var parser = flags.NewParser(&cliOptions, flags.Default)
+
+type Event struct {
+	Sort        int64
+	Name        string
+	Date        string
+	Link        string
+	Categories  []string
+	Description string
+	Include     bool
+}
+
+var allEvents []Event
+
+// constants
+//
+// # Machine Learning
+//
+// GoMLX: unimplemented ONNX op "ReduceSum" in Node "/model/ReduceSum" [ReduceSum](/model/Cast_output_0, onnx::ReduceSum_2901) -> /model/ReduceSum_output_0 - attrs[keepdims (INT)]
+// ORT: index out of range [-1]
+// var mlModelFile = "onnx/model.onnx"
+// var mlModelFile = "knowledgator/gliclass-small-v1.0"
+//
+// GoMLX: DotGeneral contracting dimensions don't match: lhs[2]=1 != rhs[0]=576
+// ORT: index out of range [-1]
+// var mlModelFile = "model.onnx"
+// var mlModelFile = "cnmoro/gliclass-edge-v3.0-onnx"
+//
+// var mlModelFile = "KnightsAnalytics/distilbert-base-uncased-finetuned-sst-2-english"
+//
+// ORT: invalid memory address or nil pointer dereference
+// var mlModelFile = winado/gliclass-base-onnx"
+//
+// works with ORT & XLA
+// 2.936602584s ORT
+var mlModelFile = "onnx/model.onnx"
+var mlModel = "MoritzLaurer/deberta-v3-large-zeroshot-v2.0"
+
+// 957.691292ms ORT
+// var mlModelFile = "MoritzLaurer/deberta-v3-base-zeroshot-v2.0"
+//
+// fails
+// var mlModelFile = "onnx-community/deberta-v3-small"
+//
+// 957.295666ms ORT, hang GO, 4.726374958s XLA
+// const mlModel = "KnightsAnalytics/deberta-v3-base-zeroshot-v1"
+// const mlModelFile = "model.onnx"
+const mlBackend = "ORT"
+const mlMinScore = 0.1
+
+// night time
+const nighttimeEndHour = 8
+const nighttimeStartHour = 22
+
+const maxCategoriesPerEvent = 3
+const maxDescription = 250
+
+var palette []colorful.Color
 
 func main() {
 
@@ -45,43 +113,164 @@ func main() {
 		os.Exit(0)
 	}
 
-	// setup
+	// validate arguments
 	//
-	page := utils.StartCamoufox(options.Headless)
-	defer utils.Finish(page)
+	var startDate time.Time
+	var endDate time.Time
 
-	// main page
-	//
-	// FIX THIS - allow multiple passes & remove duplicates
-	// FIX THIS - allow "low cost" ... not free but say less that £20/$20/€20
-	// FIX THIS - allow shorter times (1 week / 2 weeks)
+	if cliOptions.StartDate != "" {
+		dt, err := dateparser.Parse(nil, cliOptions.StartDate)
+		if err != nil {
+			panic(fmt.Sprintf("could not parse start date %s: %v", cliOptions.StartDate, err))
+		}
+		startDate = dt.Time
 
-	type Event struct {
-		Sort int64
-		Name string
-		Date string
-		Link string
+		dt, err = dateparser.Parse(nil, cliOptions.EndDate)
+		if err != nil {
+			panic(fmt.Sprintf("could not parse end date %s: %v", cliOptions.EndDate, err))
+		}
+		endDate = dt.Time
 	}
-	var listEvents []Event
+
+	// if found in the cach, must still re-classify since categories have changed
+	//
+	mustClassify := false
+
+	// disk cache ... perhaps this should be the same as Event ?
+	//
+
+	type Cache struct {
+		Description string
+		Categories  []string
+	}
+	cache := cache.New[Cache]("eventbrite", cache.CacheOptionPersistent).WithExpiration(7 * 24 * time.Hour)
+	if cliOptions.Clear {
+		cache.Clear()
+	} else {
+		lastRuncategories, err := cache.Get("all categories")
+		if err == nil && reflect.DeepEqual(lastRuncategories.Categories, append(cliOptions.Include, cliOptions.Exclude...)) {
+			// all good
+		} else {
+			mustClassify = true
+			fmt.Fprintf(os.Stderr, "Categories have changed, have to re-run classifications\n")
+		}
+	}
+	cache.Set(Cache{Categories: append(cliOptions.Include, cliOptions.Exclude...)}, "all categories")
+
+	// FIX THIS - allow "low cost" ... not free but say less that £20/$20/€20
+	// FIX THIS - run on arm platform and improve inference peformance.  ollama ?
+	// FIX THIS - add https://www.gresham.ac.uk/watch-now Gresham
+	// FIX THIS - add https://www.rigb.org/whats-on?see-all Royal institution but only the online and there are fees. Booking though Eventbrite
+	// FIX THIS - add https://www.york.ac.uk/news-and-events/events/  Uni of York online variable
+	// FIX THIS - add https://www.ucl.ac.uk/events/all-events UCL online variable
+	// FIX THIS - add https://www.linnean.org/meetings-and-events Linnean Society two or three
+	// FIX THIS - add https://www.bcs.org/events-calendar/ BCS (the Chartered Institute for IT) several hybrid or webinar items each month. Booked through Eventbrite. But not all appear under science and tech
+	// FIX THIS - add https://kipac.stanford.edu/events/upcoming-events KIPAC (Kavli Institute for particle Astrophysics and cosmology) Stanford University several items each month
+	// FIX THIS - see if filtering based on English first would work out better
+	// FIX THIS - consider adding main search page to cache
+	// FIX THIS - re-try if page not found
 
 	ebPage := 1
 
 	// stats
 	//
 	eventsFound := 0
-	eventsSkippedByTitle := 0
 	eventsSkippedByDescription := 0
 	eventsSkippedByNightTime := 0
 	eventsErrors := 0
 
+	// machine learning classification
+	//
+	var session *hugot.Session
+	if mlBackend == "XLA" {
+		session, err = hugot.NewXLASession()
+	} else if mlBackend == "ORT" {
+		session, err = hugot.NewORTSession()
+	} else {
+		// tends to hang
+		session, err = hugot.NewGoSession()
+	}
+	if err != nil {
+		panic(fmt.Sprintf("Could not start hugot: %v", err))
+	}
+	defer func(session *hugot.Session) {
+		err := session.Destroy()
+		if err != nil {
+			panic("Could not destroy hugot")
+		}
+	}(session)
+	downloadOptions := hugot.NewDownloadOptions()
+	downloadOptions.OnnxFilePath = mlModelFile
+	modelPath, err := hugot.DownloadModel(mlModel, "./models/", downloadOptions)
+	if err != nil {
+		panic(fmt.Sprintf("could not download model: %v", err))
+	}
+	config := hugot.ZeroShotClassificationConfig{
+		ModelPath: modelPath,
+		Name:      "testPipeline",
+		Options: []backends.PipelineOption[*pipelines.ZeroShotClassificationPipeline]{
+			pipelines.WithLabels(append(cliOptions.Include, cliOptions.Exclude...)),
+			pipelines.WithMultilabel(false),
+		},
+	}
+	classificationPipeline, err := hugot.NewPipeline(session, config)
+	if err != nil {
+		panic(fmt.Sprintf("could not create pipeline: %v", err))
+	}
+
+	// test classification
+	//
+	/*
+		fmt.Fprintf(os.Stderr, "Running pipeline\n")
+		batch := []string{"Thermal Vision for Bats: Practical Applications in Ecology"}
+		start := time.Now()
+		batchResult, err := classificationPipeline.RunPipeline(batch)
+		elapsed := time.Since(start)
+		if err != nil {
+			panic(fmt.Sprintf("could not run pipeline: %v", err))
+		}
+		fmt.Fprintf(os.Stderr, "Done running pipeline ... took %s\n", elapsed)
+		if len(batchResult.GetOutput()) == 1 {
+			for i := range batchResult.ClassificationOutputs[0].SortedValues {
+				if batchResult.ClassificationOutputs[0].SortedValues[i].Value > 0.2 {
+					fmt.Fprintf(os.Stderr, "%s ", batchResult.ClassificationOutputs[0].SortedValues[i].Key)
+				}
+			}
+			fmt.Fprintf(os.Stderr, "\n")
+		}
+		panic("done")
+	*/
+
+	// setup
+	//
+	page := utils.StartCamoufox(cliOptions.Headless)
+	defer utils.Finish(page)
+
+	newContext, err := page.Context().Browser().NewContext()
+	if err != nil {
+		panic(fmt.Sprintf("could not open new page: %v", err))
+	}
+	page2, err := newContext.NewPage()
+	if err != nil {
+		panic(fmt.Sprintf("could not open new page: %v", err))
+	}
+	defer utils.Finish(page2)
+
 	// loop through all pages until we get nothing more ... store results in array for later sorting
 	//
 	for {
-		if ebPage > options.Maxpage {
+		if ebPage > cliOptions.Maxpage {
 			break
 		}
 
-		url := "https://www.eventbrite.com/d/online/" + options.Price + "--" + options.Category + "--events--" + options.Date + "/?page=" + strconv.Itoa(ebPage) + "&lang=en"
+		var url string
+		// https://www.eventbrite.com/d/online/free--science-and-tech--events/?page=1&start_date=2026-03-09&end_date=2026-03-23&lang=en
+
+		if cliOptions.StartDate != "" {
+			url = "https://www.eventbrite.com/d/online/" + cliOptions.Price + "--" + cliOptions.Category + "--events/?page=" + strconv.Itoa(ebPage) + "&start_date=" + startDate.Format("2006-01-02") + "&end_date=" + endDate.Format("2006-01-02") + "&lang=en"
+		} else {
+			url = "https://www.eventbrite.com/d/online/" + cliOptions.Price + "--" + cliOptions.Category + "--events--" + cliOptions.Date + "/?page=" + strconv.Itoa(ebPage) + "&lang=en"
+		}
 		fmt.Fprintf(os.Stderr, "Fetching %s\n", url)
 		_, err = page.Goto(url, playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 		if err != nil {
@@ -90,7 +279,7 @@ func main() {
 
 		// reject cookie
 		//
-		page.GetByText("Reject all", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click(playwright.LocatorClickOptions{Timeout: playwright.Float(2000.0)})
+		//page.GetByText("Reject all", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click(playwright.LocatorClickOptions{Timeout: playwright.Float(2000.0)})
 
 		events, err := page.Locator(".event-card-details").Filter(playwright.LocatorFilterOptions{Visible: playwright.Bool(true)}).All()
 		if err != nil {
@@ -125,6 +314,8 @@ func main() {
 
 		for _, event := range events {
 			eventsFound++
+			skipped := false
+
 			link, err := event.Locator(".event-card-link").First().GetAttribute("href")
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Could not find link ... skipping\n")
@@ -138,6 +329,20 @@ func main() {
 				continue
 			}
 			fmt.Fprintf(os.Stderr, "Found '%s' at '%s'\n", title, link)
+
+			// check for duplicate
+			//
+			for _, event := range allEvents {
+				if event.Link == link {
+					fmt.Fprintf(os.Stderr, "Duplicate event ... skipping\n")
+					skipped = true
+					continue
+				}
+			}
+			if skipped {
+				fmt.Fprintf(os.Stderr, "\n")
+				continue
+			}
 
 			paragraphs, err := event.Locator("p").All()
 			if err != nil {
@@ -161,152 +366,443 @@ func main() {
 
 			// parse date into sort key
 			//
-			d := strings.ReplaceAll(strings.ReplaceAll(date, "  ", " "), " • ", " ")
-			if len(strings.Split(d, " ")) < 6 {
-				fmt.Fprintf(os.Stderr, "Could not parse date '%s' ... skipping\n", d)
-				eventsErrors++
-				continue
-			}
-			d = strings.Join(strings.Split(d, " ")[0:5], " ")
-			t, err := time.Parse("Mon, Jan 2 3:04 PM", d)
+			d := strings.NewReplacer("  ", " ",
+				" • ", " ",
+				", ", " ").Replace(date)
+			re := regexp.MustCompile(`\+ [0-9]* more`)
+			d = re.ReplaceAllString(d, "")
+			dt, err := dateparser.Parse(nil, d)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Could not parse date '%s' ... skipping\n", d)
+				fmt.Fprintf(os.Stderr, "Could not parse date '%s' %v ... skipping\n", d, err)
 				eventsErrors++
 				continue
 			}
-			t = t.AddDate(time.Now().Year(), 0, 0)
-
-			// exclude by night time
-			//
-			if !options.Nighttime {
-				if time.Unix(t.Unix(), 0).Hour() < 8 || time.Unix(t.Unix(), 0).Hour() > 20 {
-					fmt.Fprintf(os.Stderr, "Skipped due to nightime event\n")
-					eventsSkippedByNightTime++
-					continue
-				}
+			if dt.Time.Before(time.Now()) {
+				dt.Time = dt.Time.AddDate(0, 0, 7)
 			}
 
-			// exclude by date
-
-			// exclude by keyword in title
+			// categorize by description
 			//
-			skipped := false
-			if len(options.Exclude) > 0 {
-				m := search.New(language.English, search.IgnoreCase)
-				for _, keyword := range options.Exclude {
-					start, _ := m.IndexString(title, keyword)
-					if start != -1 {
-						fmt.Fprintf(os.Stderr, "Skipped due to %s match\n", keyword)
-						eventsSkippedByTitle++
-						skipped = true
-						continue
-					}
-				}
-				if skipped {
-					continue
-				}
 
-				// exclude by keyword in description
-				//
-				newContext, err := page.Context().Browser().NewContext()
-				if err != nil {
-					panic(fmt.Sprintf("could not open new page: %v", err))
-				}
-				page2, err := newContext.NewPage()
-				if err != nil {
-					panic(fmt.Sprintf("could not open new page: %v", err))
-				}
+			// see if description is already cached, if so fetch
+			// if not cached do a web query & classify
+			//
+			var categories []string
+			description := ""
+			fetched := false
+			cacheEntry, err := cache.Get(link)
+			if err != nil {
+				start := time.Now()
 				_, err = page2.Goto(link, playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
+				elapsed := time.Since(start)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Could not open '%s' ... skipping\n", link)
 					eventsErrors++
-					page2.Close()
 					continue
 				}
-				// reject cookie
-				//
-				page2.GetByText("Reject all", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click(playwright.LocatorClickOptions{Timeout: playwright.Float(2000.0)})
+				fmt.Fprintf(os.Stderr, "Done fetch page ... took %s\n", elapsed)
 
-				// expand text
-				//
-				page.GetByText("Read more", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click(playwright.LocatorClickOptions{Timeout: playwright.Float(2000.0)})
-				description, err := page2.GetByTestId("section-wrapper-overview").First().InnerText()
+				description, err = page2.GetByTestId("section-wrapper-overview").First().InnerText() // needs a timeout ?
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "Could not read '%s' ... skipping\n", link)
-					eventsErrors++
-					page2.Close()
-					continue
-				}
-				//fmt.Fprintf(os.Stderr, "Description '%s'\n", description)
-				page2.Close()
-				m = search.New(language.English, search.IgnoreCase)
-				for _, keyword := range options.Exclude {
-					start, _ := m.IndexString(description, keyword)
-					if start != -1 {
-						fmt.Fprintf(os.Stderr, "Skipped due to %s match\n", keyword)
-						eventsSkippedByDescription++
-						skipped = true
+					description, err = page2.GetByTestId("overview").First().InnerText()
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "Could not read '%s' ... skipping\n", link)
+						eventsErrors++
+						allEvents = append(allEvents, Event{Sort: dt.Time.Unix(), Name: title, Date: dt.Time.Local().Format("Mon 2 Jan 3:04PM"), Link: link, Categories: []string{"Link error"}, Include: false})
 						continue
 					}
 				}
-				if skipped {
-					continue
+				fetched = true
+			} else {
+				fmt.Fprintf(os.Stderr, "Used description from cache\n")
+
+				description = cacheEntry.Description
+			}
+
+			//fmt.Fprintf(os.Stderr, "Description '%s'\n", description)
+
+			if fetched || mustClassify {
+
+				fmt.Fprintf(os.Stderr, "Running classification\n")
+
+				// classify by description
+				//
+				limit := maxDescription
+				totalText := title + " " + description
+				if len(totalText) < limit {
+					limit = len(totalText)
+				}
+				batch := []string{totalText[:limit]}
+
+				start := time.Now()
+				batchResult, err := classificationPipeline.RunPipeline(batch)
+				elapsed := time.Since(start)
+				if err != nil {
+					panic(fmt.Sprintf("could not run pipeline: %v", err))
+				}
+				fmt.Fprintf(os.Stderr, "Done running pipeline ... took %s\n", elapsed)
+
+				if len(batchResult.GetOutput()) == 1 {
+					for i := range batchResult.ClassificationOutputs[0].SortedValues {
+						if batchResult.ClassificationOutputs[0].SortedValues[i].Value > mlMinScore && i < maxCategoriesPerEvent {
+							categories = append(categories, batchResult.ClassificationOutputs[0].SortedValues[i].Key)
+						}
+					}
+				}
+
+				err = cache.Set(Cache{Description: description, Categories: categories}, link)
+				if err != nil {
+					panic(fmt.Sprintf("Could set cache %v", err))
+				}
+
+			} else {
+				fmt.Fprintf(os.Stderr, "Used classification from cache\n")
+
+				categories = cacheEntry.Categories
+			}
+
+			// add night time
+			//
+			if !cliOptions.Nighttime {
+				if dt.Time.Hour() < nighttimeEndHour || dt.Time.Hour() > nighttimeStartHour {
+					// fmt.Fprintf(os.Stderr, "Skipped due to nightime event\n")
+					eventsSkippedByNightTime++
+					categories = append(categories, "Night time")
+					skipped = true
 				}
 			}
 
-			listEvents = append(listEvents, Event{Sort: t.Unix(), Name: title, Date: d, Link: link})
+			for _, category := range categories {
+				for _, exclude := range cliOptions.Exclude {
+					if exclude == category {
+						eventsSkippedByDescription++
+						skipped = true
+						break
+					}
+				}
+				if skipped {
+					break
+				}
+			}
+
+			if skipped {
+				allEvents = append(allEvents, Event{Sort: dt.Time.Unix(), Name: title, Date: dt.Time.Local().Format("Mon 2 Jan 3:04PM"), Link: link, Categories: categories, Include: false, Description: description})
+				fmt.Fprintf(os.Stderr, "Event excluded %s\n\n", strings.Join(categories, ","))
+				continue
+			} else {
+				allEvents = append(allEvents, Event{Sort: dt.Time.Unix(), Name: title, Date: dt.Time.Local().Format("Mon 2 Jan 3:04PM"), Link: link, Categories: categories, Include: true, Description: description})
+				fmt.Fprintf(os.Stderr, "Event included %s\n\n", strings.Join(categories, ","))
+			}
 		}
 
 		ebPage++
 	}
 
-	// sort & display
-	//
 	fmt.Printf("eventbrite has been run with the following options :\n")
-	fmt.Printf("	Headless=%v\n", options.Headless)
-	fmt.Printf("	Category=%s\n", options.Category)
-	fmt.Printf("	Date=%s\n", options.Date)
-	fmt.Printf("	Price=%s\n", options.Price)
-	fmt.Printf("	Nighttime=%v\n", options.Nighttime)
-	fmt.Printf("	Maxpage=%d\n", options.Maxpage)
-	fmt.Printf("	Format=%s\n", options.Format)
-	fmt.Printf("	Exclude=%s\n", strings.Join(options.Exclude, ","))
+	fmt.Printf("	Headless=%v\n", cliOptions.Headless)
+	fmt.Printf("	Category=%s\n", cliOptions.Category)
+	fmt.Printf("	Date=%s\n", cliOptions.Date)
+	fmt.Printf("	Price=%s\n", cliOptions.Price)
+	fmt.Printf("	Nighttime=%v\n", cliOptions.Nighttime)
+	fmt.Printf("	Maxpage=%d\n", cliOptions.Maxpage)
+	fmt.Printf("	Format=%s\n", cliOptions.Format)
+	fmt.Printf("	Include=%s\n", strings.Join(cliOptions.Include, ","))
+	fmt.Printf("	Exclude=%s\n", strings.Join(cliOptions.Exclude, ","))
+	fmt.Printf("	Machine learning model %s with %s backend\n", mlModel, mlBackend)
 	fmt.Printf("\n")
 	fmt.Printf("There were %d events found.  Of which :\n", eventsFound)
-	fmt.Printf("	%d were skipped due to exclude title match\n", eventsSkippedByTitle)
-	fmt.Printf("	%d were skipped due to exclude description match\n", eventsSkippedByDescription)
+	fmt.Printf("	%d were skipped due to excluded categories match\n", eventsSkippedByDescription)
 	fmt.Printf("	%d were skipped due to nighttime\n", eventsSkippedByNightTime)
 	fmt.Printf("	%d errors\n", eventsErrors)
 	fmt.Printf("\n")
-	fmt.Printf("Below is generated wordpress source which can be cut&pasted onto your page.\n")
-	fmt.Printf("Switch to the `Code editor` (top right menu), paste then switch back to `Visual editor`.\n")
+
+	// sort
+	//
+	sort.Slice(allEvents, func(i, j int) bool {
+		return allEvents[i].Sort < allEvents[j].Sort
+	})
+
+	// and generate
+	//
+
+	palette, err = colorful.HappyPalette(len(cliOptions.Include) + len(cliOptions.Exclude))
+	if err != nil {
+		panic(fmt.Sprintf("could not generate colors: %v", err))
+	}
+
+	fmt.Printf("Colour palette is:\n")
+
+	for i, category := range append(cliOptions.Include, cliOptions.Exclude...) {
+		fmt.Printf("	%s - <mark style=\"background-color:%s\" class=\"has-inline-color has-white-color\"> %s </mark>\n", category, palette[i].Hex(), category)
+	}
 	fmt.Printf("\n")
 
-	if options.Format == "list" {
-		fmt.Printf("<!-- wp:list --><ul class=\"wp-block-list\">\n")
+	report := ""
+	if cliOptions.Format == "list" {
+
+		fmt.Printf("Below is generated wordpress source which can be cut&pasted onto your page.\n")
+		fmt.Printf("Switch to the `Code editor` (top right menu), paste then switch back to `Visual editor`.\n")
+		fmt.Printf("\n")
+
+		report = generateList()
+
+	} else if cliOptions.Format == "table" {
+
+		fmt.Printf("Below is generated wordpress source which can be cut&pasted onto your page.\n")
+		fmt.Printf("Switch to the `Code editor` (top right menu), paste then switch back to `Visual editor`.\n")
+		fmt.Printf("\n")
+
+		report = generateTable()
+
 	} else {
-		fmt.Printf("<!-- wp:table {\"hasFixedLayout\":false,\"align\":\"left\",\"className\":\"is-style-regular\"} -->\n")
-		fmt.Printf("<figure class=\"wp-block-table alignleft is-style-regular\">\n")
-		fmt.Printf("<table><thead><tr><th>Date</th><th>Event &amp; Link</th></tr></thead><tbody>\n")
-	}
-	sort.Slice(listEvents, func(i, j int) bool {
-		return listEvents[i].Sort < listEvents[j].Sort
-	})
-	for _, event := range listEvents {
-		if options.Format == "list" {
-			fmt.Printf("<!-- wp:list-item -->\n")
-			fmt.Printf("<li>%s <a href=\"%s\">%s</a></li>\n", event.Date, event.Link, event.Name)
-			fmt.Printf("<!-- /wp:list-item -->\n")
-		} else {
-			fmt.Printf("<tr><td>%s</td><td><a href=\"%s\">%s</a></td></tr>\n", event.Date, event.Link, event.Name)
-		}
-	}
-	if options.Format == "list" {
-		fmt.Printf("</ul><!-- /wp:list -->\n")
-	} else {
-		fmt.Printf("</tbody></table></figure>\n")
-		fmt.Printf("<!-- /wp:table -->\n")
+
+		fmt.Printf("Below is generated tablepress in json.  Use the TablePress menu in wordpress to import\n")
+		fmt.Printf("this to a new table and then add that TablePress to your page.\n")
+		fmt.Printf("\n")
+
+		report = generateTablePress()
 	}
 
-	bufio.NewWriter(os.Stdout).Flush()
+	if len(cliOptions.Save) == 0 {
+		fmt.Print(report)
+	} else {
+		fi, err := os.Create(cliOptions.Save)
+		if err != nil {
+			panic(err)
+		}
+		defer func() {
+			if err := fi.Close(); err != nil {
+				panic(err)
+			}
+		}()
+		fi.WriteString(report)
+	}
+}
+
+func generateList() string {
+	var sb strings.Builder
+
+	fmt.Fprintf(&sb, "<!-- wp:heading -->\n")
+	if cliOptions.StartDate != "" {
+		fmt.Fprintf(&sb, "<h2 class=\"wp-block-heading\">%s to %s</h2>\n", cliOptions.StartDate, cliOptions.EndDate)
+	} else {
+		fmt.Fprintf(&sb, "<h2 class=\"wp-block-heading\">%s</h2>\n", cliOptions.Date)
+	}
+	fmt.Fprintf(&sb, "<!-- /wp:heading -->\n")
+
+	fmt.Fprintf(&sb, "<!-- wp:list --><ul class=\"wp-block-list\">\n")
+
+	for _, event := range allEvents {
+		if event.Include {
+			fmt.Fprintf(&sb, "<!-- wp:list-item -->\n")
+			fmt.Fprintf(&sb, "<li>%s ", event.Date)
+			for _, category := range event.Categories {
+				// find a color
+				color := palette[0]
+				for i, cat := range append(cliOptions.Include, cliOptions.Exclude...) {
+					if cat == category {
+						color = palette[i%len(palette)]
+						break
+					}
+				}
+				fmt.Fprintf(&sb, "<mark style=\"background-color:%s\" class=\"has-inline-color has-white-color\"> %s </mark> ", color.Hex(), category)
+			}
+			fmt.Fprintf(&sb, "<a href=\"%s\">%s</a></li>\n", event.Link, html.EscapeString(event.Name))
+			fmt.Fprintf(&sb, "<!-- /wp:list-item -->\n")
+		}
+	}
+
+	fmt.Fprintf(&sb, "<!-- wp:heading -->\n")
+	fmt.Fprintf(&sb, "<h2 class=\"wp-block-heading\">Excluded</h2>\n")
+	fmt.Fprintf(&sb, "<!-- /wp:heading -->\n")
+
+	fmt.Fprintf(&sb, "</ul><!-- /wp:list -->\n")
+	fmt.Fprintf(&sb, "<!-- wp:list --><ul class=\"wp-block-list\">\n")
+
+	for _, event := range allEvents {
+		if !event.Include {
+			fmt.Fprintf(&sb, "<!-- wp:list-item -->\n")
+			fmt.Fprintf(&sb, "<li>%s ", event.Date)
+			for _, category := range event.Categories {
+				// find a color
+				color := palette[0]
+				for i, cat := range append(cliOptions.Include, cliOptions.Exclude...) {
+					if cat == category {
+						color = palette[i%len(palette)]
+						break
+					}
+				}
+				fmt.Fprintf(&sb, "<mark style=\"background-color:%s\" class=\"has-inline-color has-white-color\"> %s </mark> ", color.Hex(), category)
+			}
+			fmt.Fprintf(&sb, "<a href=\"%s\">%s</a></li>\n", event.Link, html.EscapeString(event.Name))
+			fmt.Fprintf(&sb, "<!-- /wp:list-item -->\n")
+		}
+	}
+
+	fmt.Fprintf(&sb, "</ul><!-- /wp:list -->\n")
+
+	return sb.String()
+}
+
+func generateTable() string {
+	var sb strings.Builder
+
+	// sort & display
+	//
+
+	fmt.Printf("<!-- wp:heading -->\n")
+	if cliOptions.StartDate != "" {
+		fmt.Fprintf(&sb, "<h2 class=\"wp-block-heading\">%s to %s</h2>\n", cliOptions.StartDate, cliOptions.EndDate)
+	} else {
+		fmt.Fprintf(&sb, "<h2 class=\"wp-block-heading\">%s</h2>\n", cliOptions.Date)
+	}
+	fmt.Fprintf(&sb, "<!-- /wp:heading -->\n")
+
+	fmt.Fprintf(&sb, "<!-- wp:table {\"hasFixedLayout\":false,\"align\":\"left\",\"className\":\"is-style-regular\"} -->\n")
+	fmt.Fprintf(&sb, "<figure class=\"wp-block-table alignleft is-style-regular\">\n")
+	fmt.Fprintf(&sb, "<table><thead><tr><th>Date</th><th>Categories</th><th>Event &amp; Link</th></tr></thead><tbody>\n")
+
+	for _, event := range allEvents {
+		if event.Include {
+			fmt.Fprintf(&sb, "<tr><td>%s</td><td>", event.Date)
+			for _, category := range event.Categories {
+				// find a color
+				color := palette[0]
+				for i, cat := range append(cliOptions.Include, cliOptions.Exclude...) {
+					if cat == category {
+						color = palette[i%len(palette)]
+						break
+					}
+				}
+				fmt.Fprintf(&sb, "<mark style=\"background-color:%s\" class=\"has-inline-color has-white-color\"> %s </mark> ", color.Hex(), category)
+			}
+			fmt.Fprintf(&sb, "</td><td><a href=\"%s\">%s</a></td></tr>\n", event.Link, html.EscapeString(event.Name))
+		}
+	}
+
+	fmt.Fprintf(&sb, "</tbody></table></figure>\n")
+	fmt.Fprintf(&sb, "<!-- /wp:table -->\n")
+
+	fmt.Fprintf(&sb, "<!-- wp:heading -->\n")
+	fmt.Fprintf(&sb, "<h2 class=\"wp-block-heading\">Excluded</h2>\n")
+	fmt.Fprintf(&sb, "<!-- /wp:heading -->\n")
+
+	fmt.Fprintf(&sb, "<!-- wp:table {\"hasFixedLayout\":false,\"align\":\"left\",\"className\":\"is-style-regular\"} -->\n")
+	fmt.Fprintf(&sb, "<figure class=\"wp-block-table alignleft is-style-regular\">\n")
+	fmt.Fprintf(&sb, "<table><thead><tr><th>Date</th><th>Categories</th><th>Event &amp; Link</th></tr></thead><tbody>\n")
+
+	for _, event := range allEvents {
+		if !event.Include {
+			fmt.Fprintf(&sb, "<tr><td>%s</td><td>", event.Date)
+			for _, category := range event.Categories {
+				// find a color
+				color := palette[0]
+				for i, cat := range append(cliOptions.Include, cliOptions.Exclude...) {
+					if cat == category {
+						color = palette[i%len(palette)]
+						break
+					}
+				}
+				fmt.Fprintf(&sb, "<mark style=\"background-color:%s\" class=\"has-inline-color has-white-color\"> %s </mark> ", color.Hex(), category)
+			}
+			fmt.Fprintf(&sb, "</td><td><a href=\"%s\">%s</a></td></tr>\n", event.Link, html.EscapeString(event.Name))
+		}
+	}
+
+	fmt.Fprintf(&sb, "</tbody></table></figure>\n")
+	fmt.Fprintf(&sb, "<!-- /wp:table -->\n")
+
+	return sb.String()
+}
+
+func generateTablePress() string {
+	var sb strings.Builder
+
+	// sort & display
+	//
+
+	fmt.Fprintf(&sb, "{\n")
+	fmt.Fprintf(&sb, "  \"name\": \"External events %s to %s\",\n", cliOptions.StartDate, cliOptions.EndDate)
+	fmt.Fprintf(&sb, "  \"description\": \"This is a list of events you may be interested in.\",\n")
+	fmt.Fprintf(&sb, "  \"data\": [\n")
+	fmt.Fprintf(&sb, "    [\n")
+	fmt.Fprintf(&sb, "      \"Row (hidden)\",\n")
+	fmt.Fprintf(&sb, "      \"Date\",\n")
+	fmt.Fprintf(&sb, "      \"Categories\",\n")
+	fmt.Fprintf(&sb, "      \"Event & Link\"\n")
+	fmt.Fprintf(&sb, "    ],\n")
+
+	for i, event := range allEvents {
+		fmt.Fprintf(&sb, "    [\n")
+		fmt.Fprintf(&sb, "      \"%d\",\n", i+1)
+		fmt.Fprintf(&sb, "      \"%s \",\n", event.Date)
+		fmt.Fprintf(&sb, "      \"")
+		for _, category := range event.Categories {
+			// find a color
+			color := palette[0]
+			for i, cat := range append(cliOptions.Include, cliOptions.Exclude...) {
+				if cat == category {
+					color = palette[i%len(palette)]
+					break
+				}
+			}
+			fmt.Fprintf(&sb, "<mark style=\\\"background-color:%s\\\" class=\\\"has-inline-color has-white-color\\\"> %s </mark> ", color.Hex(), category)
+		}
+		fmt.Fprintf(&sb, "\",\n")
+		fmt.Fprintf(&sb, "      \"<a href=\\\"%s\\\">%s</a>\"\n", event.Link, html.EscapeString(event.Name)) // might need to escape " here
+		if i+1 < len(allEvents) {
+			fmt.Fprintf(&sb, "    ],\n")
+		} else {
+			fmt.Fprintf(&sb, "    ]\n")
+		}
+	}
+
+	fmt.Fprintf(&sb, "  ],\n")
+	fmt.Fprintf(&sb, "  \"options\": {\n")
+	fmt.Fprintf(&sb, "    \"table_head\": 1,\n")
+	fmt.Fprintf(&sb, "    \"table_foot\": 0,\n")
+	fmt.Fprintf(&sb, "    \"alternating_row_colors\": true,\n")
+	fmt.Fprintf(&sb, "    \"row_hover\": true,\n")
+	fmt.Fprintf(&sb, "    \"print_name\": true,\n")
+	fmt.Fprintf(&sb, "    \"print_name_position\": \"above\",\n")
+	fmt.Fprintf(&sb, "    \"print_description\": true,\n")
+	fmt.Fprintf(&sb, "    \"print_description_position\": \"above\",\n")
+	fmt.Fprintf(&sb, "    \"extra_css_classes\": \"\",\n")
+	fmt.Fprintf(&sb, "    \"use_datatables\": true,\n")
+	fmt.Fprintf(&sb, "    \"datatables_sort\": false,\n")
+	fmt.Fprintf(&sb, "    \"datatables_filter\": true,\n")
+	fmt.Fprintf(&sb, "    \"datatables_paginate\": true,\n")
+	fmt.Fprintf(&sb, "    \"datatables_lengthchange\": true,\n")
+	fmt.Fprintf(&sb, "    \"datatables_paginate_entries\": 20,\n")
+	fmt.Fprintf(&sb, "    \"datatables_info\": true,\n")
+	fmt.Fprintf(&sb, "    \"datatables_scrollx\": false,\n")
+	fmt.Fprintf(&sb, "    \"datatables_custom_commands\": \"\"\n")
+	fmt.Fprintf(&sb, "  },\n")
+
+	fmt.Fprintf(&sb, "  \"visibility\": {\n")
+	fmt.Fprintf(&sb, "    \"rows\": [\n")
+	fmt.Fprintf(&sb, "      1,\n")
+	for i, event := range allEvents {
+		if event.Include {
+			fmt.Fprintf(&sb, "      1")
+		} else {
+			fmt.Fprintf(&sb, "      0")
+		}
+		if i+1 < len(allEvents) {
+			fmt.Fprintf(&sb, ",\n")
+		} else {
+			fmt.Fprintf(&sb, "\n")
+		}
+	}
+	fmt.Fprintf(&sb, "    ],\n")
+	fmt.Fprintf(&sb, "    \"columns\": [\n")
+	fmt.Fprintf(&sb, "      0,\n")
+	fmt.Fprintf(&sb, "      1,\n")
+	fmt.Fprintf(&sb, "      1,\n")
+	fmt.Fprintf(&sb, "      1\n")
+	fmt.Fprintf(&sb, "    ]\n")
+	fmt.Fprintf(&sb, "  }\n")
+	fmt.Fprintf(&sb, "}\n")
+
+	return sb.String()
 }
