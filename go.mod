@@ -102,4 +102,4 @@ replace github.com/plord12/webscrapers/utils => ./utils
 // replace github.com/gomlx/go-xla v0.1.4 => /Users/plord/src/gomlx/go-xla
 // replace github.com/gomlx/gomlx v0.26.0 => /Users/plord/src/gomlx/gomlx
 // replace github.com/gomlx/onnx-gomlx v0.3.4 => /Users/plord/src/gomlx/onnx-gomlx
-replace github.com/knights-analytics/hugot v0.6.4 => /Users/plord/src/hugot
+// replace github.com/knights-analytics/hugot v0.6.4 => /Users/plord/src/hugot
