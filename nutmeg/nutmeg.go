@@ -23,7 +23,7 @@ type Options struct {
 	Headless        bool   `short:"e" long:"headless" description:"Headless mode" env:"HEADLESS"`
 	Username        string `short:"u" long:"username" description:"Nutmeg username" env:"NUTMEG_USERNAME" required:"true"`
 	Password        string `short:"p" long:"password" description:"Nutmeg password" env:"NUTMEG_PASSWORD" required:"true"`
-	Otppath         string `short:"o" long:"otppath" description:"Path to file containing one time password message" default:"otp/nutmeg" env:"OTP_PATH"`
+	Otppath         string `short:"o" long:"otppath" description:"Path to file containing one time password message" default:"otp/jpmorganpi" env:"OTP_PATH"`
 	Otpcommand      string `short:"c" long:"otpcommand" description:"Command to get one time password" env:"OTP_COMMAND"`
 	Otpcleancommand string `short:"l" long:"otpcleancommand" description:"Command to clean previous one time password" env:"OTP_CLEANCOMMAND"`
 }
