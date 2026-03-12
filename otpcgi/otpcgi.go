@@ -31,7 +31,7 @@ func CGIHandler(rw http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		panic(fmt.Sprintf("Unmarshal failed %v\n", err))
 	}
-	f, err := os.Create("/home/plord/src/webscrapers/otp/" + strings.ToLower(otp.From))
+	f, err := os.Create("/home/plord/src/webscrapers/otp/" + strings.ReplaceAll(strings.ToLower(otp.From), " ", ""))
 	if err != nil {
 		panic(fmt.Sprintf("File write %v\n", err))
 	}
