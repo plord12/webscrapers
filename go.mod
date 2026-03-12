@@ -14,12 +14,13 @@ require (
 	github.com/lucasb-eyer/go-colorful v1.3.0
 	github.com/markusmobius/go-dateparser v1.2.4
 	github.com/otiai10/gosseract/v2 v2.4.1
-	github.com/playwright-community/playwright-go v0.5700.1
+	github.com/playwright-community/playwright-go v0.5200.1
 	github.com/plord12/webscrapers/utils v1.0.0
 )
 
 require (
 	github.com/artdarek/go-unzip v1.0.0 // indirect
+	github.com/asvvvad/exchange v0.0.0-20200622145202-a6da1ed4965a // indirect
 	github.com/bytedance/gopkg v0.1.3 // indirect
 	github.com/bytedance/sonic v1.15.0 // indirect
 	github.com/bytedance/sonic/loader v0.5.0 // indirect
