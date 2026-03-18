@@ -159,11 +159,11 @@ func main() {
 		// mac 10.7s, arm6 23.9s
 		//perftests("ORT", "XNNPACK", maxDescriptionWords)
 		// crashes
-		//perftests("ORT", "CoreML")
+		// perftests("ORT", "CoreML", 20, mlModel, mlModelFile)
 		// doesn't work
 		//perftests("ORT", "ACL")
 		// never ends
-		//perftests("", "", maxDescription)
+		// perftests("", "", maxDescriptionWords, mlModel, mlModelFile)
 		os.Exit(0)
 	}
 

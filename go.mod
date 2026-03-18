@@ -10,7 +10,7 @@ require (
 	github.com/jessevdk/go-flags v1.6.1
 	github.com/jonfriesen/playwright-go-stealth v0.0.3
 	github.com/juju/fslock v0.0.0-20160525022230-4d5c94c67b4b
-	github.com/knights-analytics/hugot v0.6.4
+	github.com/knights-analytics/hugot v0.6.5
 	github.com/lucasb-eyer/go-colorful v1.3.0
 	github.com/markusmobius/go-dateparser v1.2.4
 	github.com/otiai10/gosseract/v2 v2.4.1
@@ -45,10 +45,10 @@ require (
 	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/gofrs/flock v0.13.0 // indirect
 	github.com/gomlx/exceptions v0.0.3 // indirect
-	github.com/gomlx/go-huggingface v0.3.1 // indirect
-	github.com/gomlx/go-xla v0.1.4 // indirect
-	github.com/gomlx/gomlx v0.26.0 // indirect
-	github.com/gomlx/onnx-gomlx v0.3.4 // indirect
+	github.com/gomlx/go-huggingface v0.3.2 // indirect
+	github.com/gomlx/go-xla v0.2.0 // indirect
+	github.com/gomlx/gomlx v0.27.1 // indirect
+	github.com/gomlx/onnx-gomlx v0.4.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hablullah/go-hijri v1.0.2 // indirect
 	github.com/hablullah/go-juliandays v1.0.0 // indirect
@@ -85,13 +85,13 @@ require (
 	github.com/ysmood/leakless v0.9.0 // indirect
 	go.mongodb.org/mongo-driver/v2 v2.5.0 // indirect
 	golang.org/x/arch v0.25.0 // indirect
-	golang.org/x/crypto v0.48.0 // indirect
-	golang.org/x/exp v0.0.0-20260218203240-3dfff04db8fa // indirect
-	golang.org/x/image v0.36.0 // indirect
+	golang.org/x/crypto v0.49.0 // indirect
+	golang.org/x/exp v0.0.0-20260312153236-7ab1446f8b90 // indirect
+	golang.org/x/image v0.37.0 // indirect
 	golang.org/x/net v0.51.0 // indirect
 	golang.org/x/sys v0.42.0 // indirect
-	golang.org/x/term v0.40.0 // indirect
-	golang.org/x/text v0.34.0 // indirect
+	golang.org/x/term v0.41.0 // indirect
+	golang.org/x/text v0.35.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
 )

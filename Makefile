@@ -398,7 +398,7 @@ testeventbrite: ${BINDIR}/${EVENTBRITE_NAME}
 	${BINDIR}/${EVENTBRITE_NAME} --headless --reclassify --maxpage=1 --format=table \
 		--include Logic --include "Pure mathematics" \
 		--exclude Economics --exclude Accounting
-	${BINDIR}/${EVENTBRITE_NAME} --perfest --headless --maxpage=1 --reclassify --format=tablepress \
+	${BINDIR}/${EVENTBRITE_NAME} --perftest --headless --maxpage=1 --reclassify --format=tablepress \
 		--include Physics --include Energy  --include Quantum \
 		--include Chemistry  \
 		--include "Materials science" \
