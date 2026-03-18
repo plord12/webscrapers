@@ -392,15 +392,31 @@ testfacebook: ${BINDIR}/${FACEBOOK_NAME}
 
 testeventbrite: ${BINDIR}/${EVENTBRITE_NAME}
 	${BINDIR}/${EVENTBRITE_NAME} --help
-	${BINDIR}/${EVENTBRITE_NAME} --headless --maxpage=1 --format=list \
+	${BINDIR}/${EVENTBRITE_NAME} --headless --reclassify --maxpage=1 --format=list \
 		--include Logic --include "Pure mathematics" \
 		--exclude Economics --exclude Accounting
-	${BINDIR}/${EVENTBRITE_NAME} --headless --maxpage=1 --format=table \
+	${BINDIR}/${EVENTBRITE_NAME} --headless --reclassify --maxpage=1 --format=table \
 		--include Logic --include "Pure mathematics" \
 		--exclude Economics --exclude Accounting
-	${BINDIR}/${EVENTBRITE_NAME} --headless --maxpage=1 --format=tablepress \
-		--include Logic --include "Pure mathematics" \
-		--exclude Economics --exclude Accounting
+	${BINDIR}/${EVENTBRITE_NAME} --perfest --headless --maxpage=1 --reclassify --format=tablepress \
+		--include Physics --include Energy  --include Quantum \
+		--include Chemistry  \
+		--include "Materials science" \
+		--include "Life sciences" --include Sociology --include Psychology --include Brain --include "Cell science" \
+		--include "Earth sciences" --include Geology --include Geography --include Climate \
+		--include "Applied mathematics" \
+		--include "Computer science" --include "Artificial Intelligence"  \
+		--include Engineering \
+		--include "Environmental science" \
+		--include Biology --include Medicine --include Pharmacy \
+		--include "Forensic science" --include "Smart technologies" --include Neuroscience \
+		--include "Analytical science" --include biochemical \
+		\
+		--exclude Italian --exclude French --exclude German --exclude Spanish --exclude Portuguese --exclude Dutch --exclude Welsh --exclude Mandarin --exclude Chinese \
+		--exclude "Primary education" --exclude "Secondary education" --exclude "Adult training" --exclude Certification \
+		--exclude KS1 --exclude KS2 --exclude KS3 --exclude KS4 --exclude KS5 --exclude STEM --exclude "A Level" \
+		--exclude Kindergarten --exclude Classroom --exclude Alumni --exclude Trade --exclude Apprentiship --exclude Reskill --exclude Upskill --exclude Membership \
+		--exclude Statistics  --exclude Economics --exclude Accounting --exclude Finance --exclude "Business administration" --exclude "Urban planning"
 
 clean:
 	@go clean

@@ -12,10 +12,13 @@ import (
 	"fmt"
 	"html"
 	"io"
+	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"reflect"
 	"regexp"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -25,27 +28,32 @@ import (
 	"github.com/jessevdk/go-flags"
 	"github.com/knights-analytics/hugot"
 	"github.com/knights-analytics/hugot/backends"
+	"github.com/knights-analytics/hugot/options"
 	"github.com/knights-analytics/hugot/pipelines"
 	"github.com/lucasb-eyer/go-colorful"
 	"github.com/markusmobius/go-dateparser"
+	"github.com/markusmobius/go-dateparser/date"
 	"github.com/playwright-community/playwright-go"
 	"github.com/plord12/webscrapers/utils"
 )
 
 type Options struct {
-	Headless  bool     `short:"e" long:"headless" description:"Headless mode" env:"HEADLESS"`
-	Category  string   `short:"c" long:"category" description:"Category" default:"science-and-tech" env:"CATEGORY"`
-	Date      string   `short:"d" long:"date" description:"Date" default:"next-month" default:"" env:"DATE"`
-	StartDate string   `short:"s" long:"startdate" description:"Start date (YYYY-MM-DD)" env:"STARTDATE"`
-	EndDate   string   `short:"a" long:"enddate" description:"End date (YYYY-MM-DD)" env:"ENDDATE"`
-	MaxPrice  float64  `short:"p" long:"maxprice" description:"Max price for event (£)" default:"20" env:"PRICE"`
-	Nighttime bool     `short:"n" long:"nighttime" description:"Include nighttime events" env:"NIGHTTIME"`
-	Maxpage   int      `short:"m" long:"maxpage" description:"Max page number to fetch" default:"1000" env:"MAXPAGE"`
-	Format    string   `short:"f" long:"format" description:"Format - list, table or tablepress" default:"list" choice:"list" choice:"table" choice:"tablepress" env:"FORMAT"`
-	Include   []string `short:"i" long:"include" description:"Include - list of categories to include" env:"INCLUDE"`
-	Exclude   []string `short:"x" long:"exclude" description:"Exclude - list of categories to exclude" env:"EXCLUDE"`
-	Clear     bool     `short:"z" long:"clear" description:"Clear the cache ... eg change in categories" env:"CLEAR"`
-	Save      string   `short:"v" long:"save" description:"Filename to save output to" env:"SAVE"`
+	Headless     bool     `short:"e" long:"headless" description:"Headless mode" env:"HEADLESS"`
+	Category     string   `short:"c" long:"category" description:"Category" default:"science-and-tech" env:"CATEGORY"`
+	Date         string   `short:"d" long:"date" description:"Date" default:"next-month" default:"" env:"DATE"`
+	StartDate    string   `short:"s" long:"startdate" description:"Start date (YYYY-MM-DD)" env:"STARTDATE"`
+	EndDate      string   `short:"a" long:"enddate" description:"End date (YYYY-MM-DD)" env:"ENDDATE"`
+	MaxPrice     float64  `short:"p" long:"maxprice" description:"Max price for event (£)" default:"20" env:"PRICE"`
+	Nighttime    bool     `short:"n" long:"nighttime" description:"Include nighttime events" env:"NIGHTTIME"`
+	Maxpage      int      `short:"m" long:"maxpage" description:"Max page number to fetch" default:"1000" env:"MAXPAGE"`
+	Format       string   `short:"f" long:"format" description:"Format - list, table or tablepress" default:"list" choice:"list" choice:"table" choice:"tablepress" env:"FORMAT"`
+	Include      []string `short:"i" long:"include" description:"Include - list of categories to include" env:"INCLUDE"`
+	Exclude      []string `short:"x" long:"exclude" description:"Exclude - list of categories to exclude" env:"EXCLUDE"`
+	Clear        bool     `short:"z" long:"clear" description:"Clear the cache ... eg change in categories" env:"CLEAR"`
+	Reclassify   bool     `short:"r" long:"reclassify" description:"Force re-classify" env:"RECLASSIFY"`
+	Save         string   `short:"v" long:"save" description:"Filename to save output to" env:"SAVE"`
+	Perftest     bool     `short:"t" long:"perftest" description:"Run performance tests only" env:"PERFTEST"`
+	CacheAnalyse bool     `short:"y" long:"cacheanalyse" description:"Run cache analyse tests only" env:"CACHE"`
 }
 
 var cliOptions Options
@@ -80,37 +88,38 @@ type Rate struct {
 
 var rates map[string]Rate
 
+type Cache struct {
+	Title       string
+	Description string
+	Price       string
+	Categories  []string
+}
+type record[T interface{}] struct {
+	Item       T
+	Expiration uint64
+}
+
 // constants
 //
-// # Machine Learning
+// Machine Learning
+//var mlModelFile = "onnx/model.onnx"
+//var mlModel = "knowledgator/gliclass-small-v1.0"
+
+//var mlModelFile = "model.onnx"
+//var mlModel = "cnmoro/gliclass-edge-v3.0-onnx"
+
 //
-// GoMLX: unimplemented ONNX op "ReduceSum" in Node "/model/ReduceSum" [ReduceSum](/model/Cast_output_0, onnx::ReduceSum_2901) -> /model/ReduceSum_output_0 - attrs[keepdims (INT)]
-// ORT: index out of range [-1]
-// var mlModelFile = "onnx/model.onnx"
-// var mlModelFile = "knowledgator/gliclass-small-v1.0"
+// var mlModel = "KnightsAnalytics/distilbert-base-uncased-finetuned-sst-2-english"
 //
-// GoMLX: DotGeneral contracting dimensions don't match: lhs[2]=1 != rhs[0]=576
-// ORT: index out of range [-1]
-// var mlModelFile = "model.onnx"
-// var mlModelFile = "cnmoro/gliclass-edge-v3.0-onnx"
+// var mlModel = winado/gliclass-base-onnx"
 //
-// var mlModelFile = "KnightsAnalytics/distilbert-base-uncased-finetuned-sst-2-english"
-//
-// ORT: invalid memory address or nil pointer dereference
-// var mlModelFile = winado/gliclass-base-onnx"
-//
-// works with ORT & XLA
-// 2.936602584s ORT
+
 var mlModelFile = "onnx/model.onnx"
 var mlModel = "MoritzLaurer/deberta-v3-large-zeroshot-v2.0"
 
-// 957.691292ms ORT
 // var mlModelFile = "MoritzLaurer/deberta-v3-base-zeroshot-v2.0"
 //
-// fails
 // var mlModelFile = "onnx-community/deberta-v3-small"
-//
-// 957.295666ms ORT, hang GO, 4.726374958s XLA
 // const mlModel = "KnightsAnalytics/deberta-v3-base-zeroshot-v1"
 // const mlModelFile = "model.onnx"
 const mlBackend = "ORT"
@@ -121,7 +130,7 @@ const nighttimeEndHour = 8
 const nighttimeStartHour = 22
 
 const maxCategoriesPerEvent = 3
-const maxDescription = 250
+const maxDescriptionWords = 40
 
 var palette []colorful.Color
 
@@ -131,6 +140,35 @@ func main() {
 	//
 	_, err := parser.Parse()
 	if err != nil {
+		os.Exit(0)
+	}
+
+	if cliOptions.Perftest {
+		perftests("ORT", "", 20, "KnightsAnalytics/deberta-v3-base-zeroshot-v1", "model.onnx")
+		perftests("ORT", "", 40, "KnightsAnalytics/deberta-v3-base-zeroshot-v1", "model.onnx")
+		perftests("ORT", "", 60, "KnightsAnalytics/deberta-v3-base-zeroshot-v1", "model.onnx")
+		perftests("ORT", "", 80, "KnightsAnalytics/deberta-v3-base-zeroshot-v1", "model.onnx")
+		// mac 2.9s arm6 10.7s
+		perftests("ORT", "", 20, mlModel, mlModelFile)
+		perftests("ORT", "", 40, mlModel, mlModelFile)
+		perftests("ORT", "", 60, mlModel, mlModelFile)
+		perftests("ORT", "", 80, mlModel, mlModelFile)
+
+		// mac 12.6s, arm6 1m6s
+		//perftests("XLA", "", maxDescriptionWords)
+		// mac 10.7s, arm6 23.9s
+		//perftests("ORT", "XNNPACK", maxDescriptionWords)
+		// crashes
+		//perftests("ORT", "CoreML")
+		// doesn't work
+		//perftests("ORT", "ACL")
+		// never ends
+		//perftests("", "", maxDescription)
+		os.Exit(0)
+	}
+
+	if cliOptions.CacheAnalyse {
+		cacheAnalyse()
 		os.Exit(0)
 	}
 
@@ -162,11 +200,6 @@ func main() {
 	// disk cache ... perhaps this should be the same as Event ?
 	//
 
-	type Cache struct {
-		Description string
-		Price       string
-		Categories  []string
-	}
 	cache := cache.New[Cache]("eventbrite", cache.CacheOptionPersistent).WithExpiration(7 * 24 * time.Hour)
 	if cliOptions.Clear {
 		cache.Clear()
@@ -190,7 +223,7 @@ func main() {
 	// FIX THIS - add https://kipac.stanford.edu/events/upcoming-events KIPAC (Kavli Institute for particle Astrophysics and cosmology) Stanford University several items each month
 	// FIX THIS - see if filtering based on English first would work out better
 	// FIX THIS - consider adding main search page to cache
-	// FIX THIS - re-try if page not found
+	// FIX THIS - improve finding date & cost
 
 	// stats
 	//
@@ -206,11 +239,8 @@ func main() {
 	if mlBackend == "XLA" {
 		session, err = hugot.NewXLASession()
 	} else if mlBackend == "ORT" {
-		//session, err = hugot.NewORTSession(options.WithCoreML(map[string]string{"ModelFormat": "MLProgram", "MLComputeUnits": "ALL", "RequireStaticInputShapes": "0", "EnableOnSubgraphs": "0"}))
 		session, err = hugot.NewORTSession()
-
 	} else {
-		// tends to hang
 		session, err = hugot.NewGoSession()
 	}
 	if err != nil {
@@ -240,29 +270,6 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("could not create pipeline: %v", err))
 	}
-
-	// test classification
-	//
-	/*
-		fmt.Fprintf(os.Stderr, "Running pipeline\n")
-		batch := []string{"Thermal Vision for Bats: Practical Applications in Ecology"}
-		start := time.Now()
-		batchResult, err := classificationPipeline.RunPipeline(batch)
-		elapsed := time.Since(start)
-		if err != nil {
-			panic(fmt.Sprintf("could not run pipeline: %v", err))
-		}
-		fmt.Fprintf(os.Stderr, "Done running pipeline ... took %s\n", elapsed)
-		if len(batchResult.GetOutput()) == 1 {
-			for i := range batchResult.ClassificationOutputs[0].SortedValues {
-				if batchResult.ClassificationOutputs[0].SortedValues[i].Value > 0.2 {
-					fmt.Fprintf(os.Stderr, "%s ", batchResult.ClassificationOutputs[0].SortedValues[i].Key)
-				}
-			}
-			fmt.Fprintf(os.Stderr, "\n")
-		}
-		panic("done")
-	*/
 
 	// setup
 	//
@@ -381,34 +388,45 @@ func main() {
 					continue
 				}
 
-				date := ""
-				if len(paragraphs) == 2 {
-					date, err = paragraphs[0].TextContent()
-				}
-				if len(paragraphs) == 3 {
-					date, err = paragraphs[1].TextContent()
-				}
-				if date == "" {
-					fmt.Fprintf(os.Stderr, "Could not find date ... skipping\n")
-					eventsErrors++
-					continue
+				// need to look at all paragraphs looking for a date & price
+				//
+				//	0 Sat, Mar 28 •  1:00 PM  GMT
+				//	1 From $129.88
+				//	2 20% off select tickets
+				//
+				//	0 Going fast
+				//	1 Tue, Mar 31 •  2:00 PM  GMT+1
+				//	2 From $81.86
+				//	3 15% off select tickets
+				//	4 2 for 1 deal
+
+				var dt date.Date
+				found := false
+				for _, para := range paragraphs {
+					t, _ := para.TextContent()
+
+					// parse date into sort key
+					//
+					d := strings.NewReplacer("  ", " ",
+						" • ", " ",
+						", ", " ").Replace(t)
+					re := regexp.MustCompile(`\+ [0-9]* more`)
+					d = re.ReplaceAllString(d, "")
+					dt, err = dateparser.Parse(nil, d)
+					if err != nil {
+						continue
+					}
+					if dt.Time.Before(time.Now()) {
+						dt.Time = dt.Time.AddDate(0, 0, 7)
+					}
+					found = true
+					break
 				}
 
-				// parse date into sort key
-				//
-				d := strings.NewReplacer("  ", " ",
-					" • ", " ",
-					", ", " ").Replace(date)
-				re := regexp.MustCompile(`\+ [0-9]* more`)
-				d = re.ReplaceAllString(d, "")
-				dt, err := dateparser.Parse(nil, d)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "Could not parse date '%s' %v ... skipping\n", d, err)
+				if !found {
+					fmt.Fprintf(os.Stderr, "Could not parse date ... skipping\n")
 					eventsErrors++
 					continue
-				}
-				if dt.Time.Before(time.Now()) {
-					dt.Time = dt.Time.AddDate(0, 0, 7)
 				}
 
 				// categorize by description
@@ -474,32 +492,29 @@ func main() {
 
 					description = cacheEntry.Description
 					eventPrice = cacheEntry.Price
+					title = cacheEntry.Title
 					localPrice, err = convertToGBP(eventPrice)
 				}
 
 				//fmt.Fprintf(os.Stderr, "Description '%s'\n", description)
 
-				if fetched || mustClassify {
+				if fetched || mustClassify || cliOptions.Reclassify {
 
 					fmt.Fprintf(os.Stderr, "Running classification\n")
 
 					// classify by description
 					//
-					limit := maxDescription
-					totalText := title + " " + description
-					if len(totalText) < limit {
-						limit = len(totalText)
-					}
-					batch := []string{totalText[:limit]}
-
 					start := time.Now()
+					limit := maxDescriptionWords
+					words := strings.Split(title+" "+description, " ")
+					if len(words) < limit {
+						limit = len(words)
+					}
+					batch := []string{strings.Join(words[:limit], " ")}
 					batchResult, err := classificationPipeline.RunPipeline(batch)
-					elapsed := time.Since(start)
 					if err != nil {
 						panic(fmt.Sprintf("could not run pipeline: %v", err))
 					}
-					fmt.Fprintf(os.Stderr, "Done running pipeline ... took %s\n", elapsed)
-
 					if len(batchResult.GetOutput()) == 1 {
 						for i := range batchResult.ClassificationOutputs[0].SortedValues {
 							if batchResult.ClassificationOutputs[0].SortedValues[i].Value > mlMinScore && i < maxCategoriesPerEvent {
@@ -508,7 +523,28 @@ func main() {
 						}
 					}
 
-					err = cache.Set(Cache{Description: description, Categories: categories, Price: eventPrice}, link)
+					// if no categories, perhaps try with whole description
+					//
+					if len(categories) == 0 {
+						fmt.Fprintf(os.Stderr, "Running classification again\n")
+						batch = []string{strings.Join(words, " ")}
+						batchResult, err = classificationPipeline.RunPipeline(batch)
+						if err != nil {
+							panic(fmt.Sprintf("could not run pipeline: %v", err))
+						}
+						if len(batchResult.GetOutput()) == 1 {
+							for i := range batchResult.ClassificationOutputs[0].SortedValues {
+								if batchResult.ClassificationOutputs[0].SortedValues[i].Value > mlMinScore && i < maxCategoriesPerEvent {
+									categories = append(categories, batchResult.ClassificationOutputs[0].SortedValues[i].Key)
+								}
+							}
+						}
+					}
+
+					elapsed := time.Since(start)
+					fmt.Fprintf(os.Stderr, "Done running pipeline ... took %s\n", elapsed)
+
+					err = cache.Set(Cache{Title: title, Description: description, Categories: categories, Price: eventPrice}, link)
 					if err != nil {
 						panic(fmt.Sprintf("Could set cache %v", err))
 					}
@@ -646,27 +682,165 @@ func main() {
 	}
 }
 
+func perftests(backend string, executionProvidor string, length int, model string, modelFile string) {
+
+	var session *hugot.Session
+	var err error
+
+	if backend == "XLA" {
+		session, err = hugot.NewXLASession()
+	} else if backend == "ORT" {
+		if executionProvidor == "CoreML" {
+
+			// https://onnxruntime.ai/docs/execution-providers/CoreML-ExecutionProvider.html
+			session, err = hugot.NewORTSession(options.WithCoreML(map[string]string{"ModelFormat": "MLProgram", "MLComputeUnits": "ALL", "RequireStaticInputShapes": "0", "EnableOnSubgraphs": "0"}))
+
+		} else if executionProvidor == "XNNPACK" {
+
+			// https://onnxruntime.ai/docs/execution-providers/Xnnpack-ExecutionProvider.html
+			session, err = hugot.NewORTSession(options.WithOnnxLibraryPath("onnx/onnxruntime/build/MacOS/RelWithDebInfo"),
+				options.WithInterOpNumThreads(1),
+				options.WithInterOpSpinning(false),
+				options.WithExtraExecutionProvider("XNNPACK", map[string]string{"intra_op_num_threads": strconv.Itoa(runtime.NumCPU())}))
+
+		} else if executionProvidor == "ACL" {
+
+			// https://onnxruntime.ai/docs/execution-providers/community-maintained/ACL-ExecutionProvider.html
+
+			session, err = hugot.NewORTSession(options.WithOnnxLibraryPath("onnx/onnxruntime/build/MacOS/RelWithDebInfo"),
+				options.WithExtraExecutionProvider("ACL", map[string]string{}))
+		} else {
+
+			//session, err = hugot.NewORTSession(options.WithOnnxLibraryPath("onnx/onnxruntime/build/MacOS/RelWithDebInfo"))
+			session, err = hugot.NewORTSession()
+
+		}
+		// RKNPU on linux ? https://onnxruntime.ai/docs/execution-providers/community-maintained/RKNPU-ExecutionProvider.html
+
+	} else {
+		// tends to hang
+		session, err = hugot.NewGoSession()
+	}
+	if err != nil {
+		panic(fmt.Sprintf("Could not start hugot: %v", err))
+	}
+
+	downloadOptions := hugot.NewDownloadOptions()
+	downloadOptions.OnnxFilePath = modelFile
+	modelPath, err := hugot.DownloadModel(model, "./models/", downloadOptions)
+	if err != nil {
+		panic(fmt.Sprintf("could not download model: %v", err))
+	}
+	config := hugot.ZeroShotClassificationConfig{
+		ModelPath: modelPath,
+		Name:      "testPipeline",
+		Options: []backends.PipelineOption[*pipelines.ZeroShotClassificationPipeline]{
+			pipelines.WithLabels(append(cliOptions.Include, cliOptions.Exclude...)),
+			pipelines.WithMultilabel(false),
+		},
+	}
+	classificationPipeline, err := hugot.NewPipeline(session, config)
+	if err != nil {
+		panic(fmt.Sprintf("could not create pipeline: %v", err))
+	}
+
+	// test classification
+	//
+
+	fmt.Fprintf(os.Stderr, "Running pipeline %s %s %s %d\n", backend, model, executionProvidor, length)
+
+	title := "Hope in Action: Being Human in the Age of Generative AI"
+	description := "Overview\n\nRethinking creativity, work, and agency in the age of generative artificial intelligence.\n\nWe are living through a moment where tools like ChatGPT, Midjourney, and GitHub Copilot are no longer futuristic curiosities, they are genuine collaborators in our writing, coding, designing, and decision-making.\n\n\n\n\nThis talk steps back from the hype to ask a more human question: what happens to creativity, work, and personal agency when machines can generate ideas, images, and solutions at scale? Technology and privacy lawyer Maleeha Akhtar will explore how these systems blur lines we once took for granted between author and tool, employee and employer, automation and autonomy. We’ll consider what it means to create in an age of algorithmic assistance, how power shifts when data becomes raw material for intelligence, and how law can protect not just innovation, but dignity, fairness, and meaningful human choice.\n\n\n\n\nUltimately, this session is about ensuring that as AI grows more capable, we remain intentional about the kind of society, and the kind of human role within it, we want to build.\n\n\n\n\nHope in Action Lecture Series\n\n\n\n\nWith so many reasons for despair, where are we finding real cause for hope?\n\nThe Hope in Action Lecture Series from the University of St. Michael's College Continuing Education brings together innovators, leaders, alumni, and faculty who are choosing courage over cynicism. Through dynamic conversations held every six weeks, this series explores how hope becomes action in sustainability, social impact, spirituality, leadership, education, the arts, and beyond.\n\nHope is not wishful thinking. It is the decision to engage with our world’s most urgent challenges and work toward meaningful change , from climate and culture to how we live our values in our workplaces and communities.\n\nJoin us for bold ideas, practical inspiration, and living examples of radical hope in our time. Come to be inspired. Leave ready to act.\n\nRead more"
+	//title := "The Platform Decay: A Discussion of \"Enshittification\" by Cory Doctorow"
+	//description := "Overview\n\nJoin us for an online discussion on March 25th!\n\nWhy do the digital platforms we once loved eventually turn against us? In his 2025 book, Enshittification, Cory Doctorow explores the seemingly inevitable lifecycle of modern tech giants: first, they are good to their users; then they abuse their users to favor their business customers; finally, they abuse those customers to claw back all the value for themselves before eventually dying.\n\nJoin the Austin Forum for a provocative online book discussion on this critical framework for understanding the modern web. We will move beyond the cynicism to discuss the technical and policy \"antidotes\" that Doctorow proposes to keep the internet free, fair, and functional.\n\nOur discussion will focus on the role of the technologist in resisting platform decay:\n\nThe Lifecycle of a Platform: Understanding the economic and technical incentives that drive companies toward \"enshittification\" and how to identify the warning signs early.\nAdversarial Interoperability: Discussing the technical right to build tools that plug into existing platforms—even without their permission—as a way to return power to the users.\nBuilding for Longevity: How technologists can design systems that are \"anti-enshittification\" by default, focusing on decentralized protocols, data portability, and user-centric architecture.\nThe Austin Tech Response: How our local startup and development community can build the next generation of \"honest\" platforms that resist the urge to capture and exploit their user base.\n\nWhether you are a platform strategist, a software architect or developer, or a concerned digital citizen, join us to discuss how we can save the internet from its own worst impulses.\n\n\n\n\nAttendance Instructions\n\nThe discussion will be held online via Google Meet. Please register to receive the meet link!\n\nSpace is limited, so please register only if you’re confident you can attend—and kindly cancel your registration if your plans change so we can open your spot to another participant.\n\nRead more"
+
+	limit := length
+	words := strings.Split(title+" "+description, " ")
+	if len(words) < limit {
+		limit = len(words)
+	}
+	batch := []string{strings.Join(words[:limit], " ")}
+	//fmt.Fprintf(os.Stderr, "%s\n", strings.Join(words[:limit], " "))
+
+	start := time.Now()
+	batchResult, err := classificationPipeline.RunPipeline(batch)
+	elapsed := time.Since(start)
+	if err != nil {
+		panic(fmt.Sprintf("could not run pipeline: %v", err))
+	}
+	fmt.Fprintf(os.Stderr, "Done running pipeline ... took %s\n", elapsed)
+	if len(batchResult.GetOutput()) == 1 {
+		for i := range batchResult.ClassificationOutputs[0].SortedValues {
+			if batchResult.ClassificationOutputs[0].SortedValues[i].Value > mlMinScore {
+				fmt.Fprintf(os.Stderr, "%s ", batchResult.ClassificationOutputs[0].SortedValues[i].Key)
+			}
+		}
+		fmt.Fprintf(os.Stderr, "\n")
+	}
+
+	session.Destroy()
+}
+
+func cacheAnalyse() {
+	// open up cache files directly, read json into structs and process
+
+	// look for 2 categories often used together
+
+	// look for events with 0 categories
+
+	folder, _ := os.UserCacheDir()
+	folder = filepath.Join(folder, "eventbrite")
+
+	entries, err := os.ReadDir(folder)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	usedCategories := make(map[string]bool)
+	for _, e := range entries {
+		jsonData, _ := os.ReadFile(filepath.Join(folder, e.Name()))
+		var record record[Cache]
+		err = json.Unmarshal(jsonData, &record)
+		if err != nil {
+			log.Fatal(err)
+		}
+		for _, c := range record.Item.Categories {
+			usedCategories[c] = true
+		}
+
+		if len(record.Item.Categories) == 0 {
+			fmt.Printf("Event %s has zero categories\n", record.Item.Title)
+		}
+	}
+
+	// look for categories not used
+	for _, specifiedCategory := range append(cliOptions.Include, cliOptions.Exclude...) {
+		if !usedCategories[specifiedCategory] {
+			fmt.Printf("Category %s not used\n", specifiedCategory)
+		}
+	}
+}
+
 func getExchangeRates() {
 	// should cache this
-	httpClient := http.Client{Timeout: time.Second * 2}
+	httpClient := http.Client{}
 
 	req, err := http.NewRequest(http.MethodGet, "https://www.floatrates.com/daily/gbp.json", nil)
 	if err != nil {
-		panic(fmt.Sprintf("could not create http session: %v", err))
+		fmt.Fprintf(os.Stderr, "could not create http session: %v", err)
 
 	}
 	res, getErr := httpClient.Do(req)
 	if getErr != nil {
-		panic(fmt.Sprintf("could not get exchange rates from floatrates: %v", err))
-
+		fmt.Fprintf(os.Stderr, "could not get exchange rates from floatrates: %v", err)
 	}
 	body, readErr := io.ReadAll(res.Body)
 	if readErr != nil {
-		panic(fmt.Sprintf("could not read exchange rates from floatrates: %v", err))
+		fmt.Fprintf(os.Stderr, "could not read exchange rates from floatrates: %v", err)
 	}
 	jsonErr := json.Unmarshal(body, &rates)
 	if jsonErr != nil {
-		panic(fmt.Sprintf("could not process exchange rates json: %v", err))
+		fmt.Fprintf(os.Stderr, "could not process exchange rates json: %v", err)
 	}
 }
 
