@@ -52,7 +52,7 @@ func main() {
 	// main page & login
 	//
 	log.Printf("Starting login\n")
-	_, err = page.Goto("https://authentication.nutmeg.com/login", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
+	_, err = page.Goto("https://app.personalinvesting.jpmorgan.com/auth/login", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 	if err != nil {
 		panic(fmt.Sprintf("could not goto url: %v", err))
 	}
