@@ -200,7 +200,7 @@ func main() {
 	// disk cache ... perhaps this should be the same as Event ?
 	//
 
-	cache := cache.New[Cache]("eventbrite", cache.CacheOptionPersistent).WithExpiration(7 * 24 * time.Hour)
+	cache := cache.New[Cache]("events", cache.CacheOptionPersistent).WithExpiration(7 * 24 * time.Hour)
 	if cliOptions.Clear {
 		cache.Clear()
 	} else {
@@ -221,9 +221,6 @@ func main() {
 	// FIX THIS - add https://www.linnean.org/meetings-and-events Linnean Society two or three
 	// FIX THIS - add https://www.bcs.org/events-calendar/ BCS (the Chartered Institute for IT) several hybrid or webinar items each month. Booked through Eventbrite. But not all appear under science and tech
 	// FIX THIS - add https://kipac.stanford.edu/events/upcoming-events KIPAC (Kavli Institute for particle Astrophysics and cosmology) Stanford University several items each month
-	// FIX THIS - see if filtering based on English first would work out better
-	// FIX THIS - consider adding main search page to cache
-	// FIX THIS - improve finding date & cost
 
 	// stats
 	//
@@ -236,11 +233,12 @@ func main() {
 	// machine learning classification
 	//
 	var session *hugot.Session
-	if mlBackend == "XLA" {
+	switch mlBackend {
+	case "XLA":
 		session, err = hugot.NewXLASession()
-	} else if mlBackend == "ORT" {
+	case "ORT":
 		session, err = hugot.NewORTSession()
-	} else {
+	default:
 		session, err = hugot.NewGoSession()
 	}
 	if err != nil {
@@ -390,16 +388,6 @@ func main() {
 
 				// need to look at all paragraphs looking for a date & price
 				//
-				//	0 Sat, Mar 28 •  1:00 PM  GMT
-				//	1 From $129.88
-				//	2 20% off select tickets
-				//
-				//	0 Going fast
-				//	1 Tue, Mar 31 •  2:00 PM  GMT+1
-				//	2 From $81.86
-				//	3 15% off select tickets
-				//	4 2 for 1 deal
-
 				var dt date.Date
 				found := false
 				for _, para := range paragraphs {
@@ -495,8 +483,6 @@ func main() {
 					title = cacheEntry.Title
 					localPrice, err = convertToGBP(eventPrice)
 				}
-
-				//fmt.Fprintf(os.Stderr, "Description '%s'\n", description)
 
 				if fetched || mustClassify || cliOptions.Reclassify {
 
@@ -600,10 +586,14 @@ func main() {
 		}
 	}
 
-	fmt.Printf("eventbrite has been run with the following options :\n")
+	fmt.Printf("events has been run with the following options :\n")
 	fmt.Printf("	Headless=%v\n", cliOptions.Headless)
 	fmt.Printf("	Category=%s\n", cliOptions.Category)
-	fmt.Printf("	Date=%s\n", cliOptions.Date)
+	if cliOptions.Date != "" {
+		fmt.Printf("	Date=%s\n", cliOptions.Date)
+	} else {
+		fmt.Printf("	Date=%s to %s\n", cliOptions.StartDate, cliOptions.EndDate)
+	}
 	fmt.Printf("	Nighttime=%v\n", cliOptions.Nighttime)
 	fmt.Printf("	Maxpage=%d\n", cliOptions.Maxpage)
 	fmt.Printf("	Format=%s\n", cliOptions.Format)
@@ -641,7 +631,8 @@ func main() {
 	fmt.Printf("\n")
 
 	report := ""
-	if cliOptions.Format == "list" {
+	switch cliOptions.Format {
+	case "list":
 
 		fmt.Printf("Below is generated wordpress source which can be cut&pasted onto your page.\n")
 		fmt.Printf("Switch to the `Code editor` (top right menu), paste then switch back to `Visual editor`.\n")
@@ -649,7 +640,7 @@ func main() {
 
 		report = generateList()
 
-	} else if cliOptions.Format == "table" {
+	case "table":
 
 		fmt.Printf("Below is generated wordpress source which can be cut&pasted onto your page.\n")
 		fmt.Printf("Switch to the `Code editor` (top right menu), paste then switch back to `Visual editor`.\n")
@@ -657,7 +648,7 @@ func main() {
 
 		report = generateTable()
 
-	} else {
+	default:
 
 		fmt.Printf("Below is generated tablepress in json.  Use the TablePress menu in wordpress to import\n")
 		fmt.Printf("this to a new table and then add that TablePress to your page.\n")
@@ -687,9 +678,10 @@ func perftests(backend string, executionProvidor string, length int, model strin
 	var session *hugot.Session
 	var err error
 
-	if backend == "XLA" {
+	switch backend {
+	case "XLA":
 		session, err = hugot.NewXLASession()
-	} else if backend == "ORT" {
+	case "ORT":
 		if executionProvidor == "CoreML" {
 
 			// https://onnxruntime.ai/docs/execution-providers/CoreML-ExecutionProvider.html
@@ -717,7 +709,7 @@ func perftests(backend string, executionProvidor string, length int, model strin
 		}
 		// RKNPU on linux ? https://onnxruntime.ai/docs/execution-providers/community-maintained/RKNPU-ExecutionProvider.html
 
-	} else {
+	default:
 		// tends to hang
 		session, err = hugot.NewGoSession()
 	}
@@ -789,7 +781,7 @@ func cacheAnalyse() {
 	// look for events with 0 categories
 
 	folder, _ := os.UserCacheDir()
-	folder = filepath.Join(folder, "eventbrite")
+	folder = filepath.Join(folder, "events")
 
 	entries, err := os.ReadDir(folder)
 	if err != nil {
