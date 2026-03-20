@@ -1099,7 +1099,7 @@ func generateTablePress() string {
 	tablePressStruct.Visibility.Columns = []int{0, 1, 1, 1, 1}
 
 	for i, event := range allEvents {
-		if !cliOptions.OutputExcluded && !event.Include {
+		if cliOptions.OutputExcluded && !event.Include {
 			// skip
 		} else {
 			categories := ""
