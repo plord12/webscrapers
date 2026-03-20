@@ -37,8 +37,8 @@ FACEBOOK_NAME=facebook
 FACEBOOK_SOURCE=${FACEBOOK_NAME}/${FACEBOOK_NAME}.go
 LAUNCH_NAME=launch
 LAUNCH_SOURCE=${LAUNCH_NAME}/constants.go ${LAUNCH_NAME}/exec.go ${LAUNCH_NAME}/load-addons.go ${LAUNCH_NAME}/main.go ${LAUNCH_NAME}/procgroup-unix.go ${LAUNCH_NAME}/procgroup-win.go ${LAUNCH_NAME}/validate.go ${LAUNCH_NAME}/xpi-dl.go
-events_NAME=events
-events_SOURCE=${events_NAME}/${events_NAME}.go
+EVENTS_NAME=events
+EVENTS_SOURCE=${EVENTS_NAME}/${EVENTS_NAME}.go ${EVENTS_NAME}/perftests.go ${EVENTS_NAME}/cachetests.go ${EVENTS_NAME}/exchangerates.go ${EVENTS_NAME}/eventbrite.go
 
 # local local builds/tests
 #
@@ -58,7 +58,7 @@ BINARIES+=${BINDIR}/${U3AGROUPS_NAME}
 BINARIES+=${BINDIR}/${OTPCGI_NAME} 
 BINARIES+=${BINDIR}/${SMTP2GOCGI_NAME} 
 #BINARIES+=${BINDIR}/${FACEBOOK_NAME}
-BINARIES+=${BINDIR}/${events_NAME} 
+BINARIES+=${BINDIR}/${EVENTS_NAME} 
 
 LINUXARM64BINDIR=bin-linux-arm64
 LINUXAMD64BINDIR=bin-linux-amd64
@@ -117,7 +117,7 @@ release-webscrapers-darwin-arm64: ${DARWINARM64BINDIR}/${AVIVA_NAME} ${DARWINARM
 release-webscrapers-windows-amd64: ${WINDOWSAMD64BINDIR}/${AVIVA_NAME}.exe ${WINDOWSAMD64BINDIR}/${AVIVAMYWORKPLACE_NAME}.exe ${WINDOWSAMD64BINDIR}/${NUTMEG_NAME}.exe ${WINDOWSAMD64BINDIR}/${FUND_NAME}.exe ${WINDOWSAMD64BINDIR}/${MONEYFARM_NAME}.exe ${WINDOWSAMD64BINDIR}/${OCTOPUSWHEEL_NAME}.exe ${WINDOWSAMD64BINDIR}/${MYCAUSEUK_NAME}.exe
 	cd ${WINDOWSAMD64BINDIR} && zip ../webscrapers-windows-amd64-${VERSION}.zip $(notdir $^)
 
-windows: ${WINDOWSAMD64BINDIR}/${events_NAME}.exe
+windows: ${WINDOWSAMD64BINDIR}/${EVENTS_NAME}.exe
 
 # launcher
 #
@@ -316,15 +316,15 @@ ${WINDOWSAMD64BINDIR}/${FACEBOOK_NAME}.exe: ${FACEBOOK_SOURCE}
 tokenizers/libtokenizers.a:
 	git clone https://github.com/daulet/tokenizers
 	cd tokenizers; make build
-${BINDIR}/${events_NAME}: ${events_SOURCE} ${UTILS_SOURCE} tokenizers/libtokenizers.a
-	CGO_LDFLAGS=-Ltokenizers go build -tags ORT,XLA -o $@ $<
-${LINUXARM64BINDIR}/${events_NAME}: ${events_SOURCE} ${UTILS_SOURCE}
+${BINDIR}/${EVENTS_NAME}: ${EVENTS_SOURCE} ${UTILS_SOURCE} tokenizers/libtokenizers.a
+	CGO_LDFLAGS=-Ltokenizers go build -tags ORT,XLA -o $@ ${EVENTS_SOURCE}
+${LINUXARM64BINDIR}/${EVENTS_NAME}: ${EVENTS_SOURCE} ${UTILS_SOURCE}
 	GOARCH=arm64 GOOS=linux go build -o $@ $<
-${LINUXAMD64BINDIR}/${events_NAME}: ${events_SOURCE} ${UTILS_SOURCE}
+${LINUXAMD64BINDIR}/${EVENTS_NAME}: ${EVENTS_SOURCE} ${UTILS_SOURCE}
 	GOARCH=amd64 GOOS=linux go build -o $@ $<
-${DARWINARM64BINDIR}/${events_NAME}: ${events_SOURCE} ${UTILS_SOURCE}
+${DARWINARM64BINDIR}/${EVENTS_NAME}: ${EVENTS_SOURCE} ${UTILS_SOURCE}
 	GOARCH=arm64 GOOS=darwin go build -o $@ $<
-${WINDOWSAMD64BINDIR}/${events_NAME}.exe: ${events_SOURCE} ${UTILS_SOURCE}
+${WINDOWSAMD64BINDIR}/${EVENTS_NAME}.exe: ${EVENTS_SOURCE} ${UTILS_SOURCE}
 	GOARCH=amd64 GOOS=windows go build -o $@ $<
 
 test: testha testaviva testavivamyworkplace testnutmeg testfund testmoneyfarm  testu3agroups
@@ -390,18 +390,18 @@ testfacebook: ${BINDIR}/${FACEBOOK_NAME}
 	${BINDIR}/${FACEBOOK_NAME} --help
 	${BINDIR}/${FACEBOOK_NAME}
 
-testevents: ${BINDIR}/${events_NAME}
-	${BINDIR}/${events_NAME} --help
-		${BINDIR}/${events_NAME} --save test.json --headless --outputexcluded --reclassify --maxpage=1 --format=tablepress \
+testevents: ${BINDIR}/${EVENTS_NAME}
+	${BINDIR}/${EVENTS_NAME} --help
+		${BINDIR}/${EVENTS_NAME} --save test.json --headless --outputexcluded --reclassify --maxpage=1 --format=tablepress \
 		--include Logic --include "Pure mathematics" \
 		--exclude Economics --exclude Accounting
-	${BINDIR}/${events_NAME} --headless --reclassify --maxpage=1 --format=list \
+	${BINDIR}/${EVENTS_NAME} --headless --reclassify --maxpage=1 --format=list \
 		--include Logic --include "Pure mathematics" \
 		--exclude Economics --exclude Accounting
-	${BINDIR}/${events_NAME} --headless --reclassify --maxpage=1 --format=table \
+	${BINDIR}/${EVENTS_NAME} --headless --reclassify --maxpage=1 --format=table \
 		--include Logic --include "Pure mathematics" \
 		--exclude Economics --exclude Accounting
-	${BINDIR}/${events_NAME} --perftest --headless --maxpage=1 --reclassify --format=tablepress \
+	${BINDIR}/${EVENTS_NAME} --perftest --headless --maxpage=1 --reclassify --format=tablepress \
 		--include Physics --include Energy  --include Quantum \
 		--include Chemistry  \
 		--include "Materials science" \
