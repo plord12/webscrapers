@@ -38,22 +38,23 @@ import (
 )
 
 type Options struct {
-	Headless     bool     `short:"e" long:"headless" description:"Headless mode" env:"HEADLESS"`
-	Category     string   `short:"c" long:"category" description:"Category" default:"science-and-tech" env:"CATEGORY"`
-	Date         string   `short:"d" long:"date" description:"Date" default:"next-month" default:"" env:"DATE"`
-	StartDate    string   `short:"s" long:"startdate" description:"Start date (YYYY-MM-DD)" env:"STARTDATE"`
-	EndDate      string   `short:"a" long:"enddate" description:"End date (YYYY-MM-DD)" env:"ENDDATE"`
-	MaxPrice     float64  `short:"p" long:"maxprice" description:"Max price for event (£)" default:"20" env:"PRICE"`
-	Nighttime    bool     `short:"n" long:"nighttime" description:"Include nighttime events" env:"NIGHTTIME"`
-	Maxpage      int      `short:"m" long:"maxpage" description:"Max page number to fetch" default:"1000" env:"MAXPAGE"`
-	Format       string   `short:"f" long:"format" description:"Format - list, table or tablepress" default:"list" choice:"list" choice:"table" choice:"tablepress" env:"FORMAT"`
-	Include      []string `short:"i" long:"include" description:"Include - list of categories to include" env:"INCLUDE"`
-	Exclude      []string `short:"x" long:"exclude" description:"Exclude - list of categories to exclude" env:"EXCLUDE"`
-	Clear        bool     `short:"z" long:"clear" description:"Clear the cache ... eg change in categories" env:"CLEAR"`
-	Reclassify   bool     `short:"r" long:"reclassify" description:"Force re-classify" env:"RECLASSIFY"`
-	Save         string   `short:"v" long:"save" description:"Filename to save output to" env:"SAVE"`
-	Perftest     bool     `short:"t" long:"perftest" description:"Run performance tests only" env:"PERFTEST"`
-	CacheAnalyse bool     `short:"y" long:"cacheanalyse" description:"Run cache analyse tests only" env:"CACHE"`
+	Headless       bool     `short:"e" long:"headless" description:"Headless mode" env:"HEADLESS"`
+	Category       string   `short:"c" long:"category" description:"Category" default:"science-and-tech" env:"CATEGORY"`
+	Date           string   `short:"d" long:"date" description:"Date" default:"next-month" default:"" env:"DATE"`
+	StartDate      string   `short:"s" long:"startdate" description:"Start date (YYYY-MM-DD)" env:"STARTDATE"`
+	EndDate        string   `short:"a" long:"enddate" description:"End date (YYYY-MM-DD)" env:"ENDDATE"`
+	MaxPrice       float64  `short:"p" long:"maxprice" description:"Max price for event (£)" default:"20" env:"PRICE"`
+	Nighttime      bool     `short:"n" long:"nighttime" description:"Include nighttime events" env:"NIGHTTIME"`
+	Maxpage        int      `short:"m" long:"maxpage" description:"Max page number to fetch" default:"1000" env:"MAXPAGE"`
+	Format         string   `short:"f" long:"format" description:"Format - list, table or tablepress" default:"list" choice:"list" choice:"table" choice:"tablepress" env:"FORMAT"`
+	Include        []string `short:"i" long:"include" description:"Include - list of categories to include" env:"INCLUDE"`
+	Exclude        []string `short:"x" long:"exclude" description:"Exclude - list of categories to exclude" env:"EXCLUDE"`
+	Clear          bool     `short:"z" long:"clear" description:"Clear the cache ... eg change in categories" env:"CLEAR"`
+	Reclassify     bool     `short:"r" long:"reclassify" description:"Force re-classify" env:"RECLASSIFY"`
+	Save           string   `short:"v" long:"save" description:"Filename to save output to" env:"SAVE"`
+	Perftest       bool     `short:"t" long:"perftest" description:"Run performance tests only" env:"PERFTEST"`
+	CacheAnalyse   bool     `short:"y" long:"cacheanalyse" description:"Run cache analyse tests only" env:"CACHE"`
+	OutputExcluded bool     `short:"o" long:"outputexcluded" description:"Output excluded events" env:"OUTPUTEXCLUDED"`
 }
 
 var cliOptions Options
@@ -600,6 +601,7 @@ func main() {
 	fmt.Printf("	Max price=£%.2f\n", cliOptions.MaxPrice)
 	fmt.Printf("	Include=%s\n", strings.Join(cliOptions.Include, ","))
 	fmt.Printf("	Exclude=%s\n", strings.Join(cliOptions.Exclude, ","))
+	fmt.Printf("	Output excluded=%v\n", cliOptions.OutputExcluded)
 	fmt.Printf("	Machine learning model %s with %s backend\n", mlModel, mlBackend)
 	fmt.Printf("\n")
 	fmt.Printf("There were %d events found.  Of which :\n", eventsFound)
@@ -930,35 +932,36 @@ func generateList() string {
 		}
 	}
 
-	fmt.Fprintf(&sb, "<!-- wp:heading -->\n")
-	fmt.Fprintf(&sb, "<h2 class=\"wp-block-heading\">Excluded</h2>\n")
-	fmt.Fprintf(&sb, "<!-- /wp:heading -->\n")
+	if !cliOptions.OutputExcluded {
+		fmt.Fprintf(&sb, "<!-- wp:heading -->\n")
+		fmt.Fprintf(&sb, "<h2 class=\"wp-block-heading\">Excluded</h2>\n")
+		fmt.Fprintf(&sb, "<!-- /wp:heading -->\n")
 
-	fmt.Fprintf(&sb, "</ul><!-- /wp:list -->\n")
-	fmt.Fprintf(&sb, "<!-- wp:list --><ul class=\"wp-block-list\">\n")
+		fmt.Fprintf(&sb, "</ul><!-- /wp:list -->\n")
+		fmt.Fprintf(&sb, "<!-- wp:list --><ul class=\"wp-block-list\">\n")
 
-	for _, event := range allEvents {
-		if !event.Include {
-			fmt.Fprintf(&sb, "<!-- wp:list-item -->\n")
-			fmt.Fprintf(&sb, "<li>%s (%s) ", event.Date, event.Price)
-			for _, category := range event.Categories {
-				// find a color
-				color := palette[0]
-				for i, cat := range append(cliOptions.Include, cliOptions.Exclude...) {
-					if cat == category {
-						color = palette[i%len(palette)]
-						break
+		for _, event := range allEvents {
+			if !event.Include {
+				fmt.Fprintf(&sb, "<!-- wp:list-item -->\n")
+				fmt.Fprintf(&sb, "<li>%s (%s) ", event.Date, event.Price)
+				for _, category := range event.Categories {
+					// find a color
+					color := palette[0]
+					for i, cat := range append(cliOptions.Include, cliOptions.Exclude...) {
+						if cat == category {
+							color = palette[i%len(palette)]
+							break
+						}
 					}
+					fmt.Fprintf(&sb, "<mark style=\"background-color:%s\" class=\"has-inline-color has-white-color\"> %s </mark> ", color.Hex(), category)
 				}
-				fmt.Fprintf(&sb, "<mark style=\"background-color:%s\" class=\"has-inline-color has-white-color\"> %s </mark> ", color.Hex(), category)
+				fmt.Fprintf(&sb, "<a href=\"%s\">%s</a></li>\n", event.Link, html.EscapeString(event.Name))
+				fmt.Fprintf(&sb, "<!-- /wp:list-item -->\n")
 			}
-			fmt.Fprintf(&sb, "<a href=\"%s\">%s</a></li>\n", event.Link, html.EscapeString(event.Name))
-			fmt.Fprintf(&sb, "<!-- /wp:list-item -->\n")
 		}
+
+		fmt.Fprintf(&sb, "</ul><!-- /wp:list -->\n")
 	}
-
-	fmt.Fprintf(&sb, "</ul><!-- /wp:list -->\n")
-
 	return sb.String()
 }
 
@@ -1001,17 +1004,105 @@ func generateTable() string {
 	fmt.Fprintf(&sb, "</tbody></table></figure>\n")
 	fmt.Fprintf(&sb, "<!-- /wp:table -->\n")
 
-	fmt.Fprintf(&sb, "<!-- wp:heading -->\n")
-	fmt.Fprintf(&sb, "<h2 class=\"wp-block-heading\">Excluded</h2>\n")
-	fmt.Fprintf(&sb, "<!-- /wp:heading -->\n")
+	if !cliOptions.OutputExcluded {
+		fmt.Fprintf(&sb, "<!-- wp:heading -->\n")
+		fmt.Fprintf(&sb, "<h2 class=\"wp-block-heading\">Excluded</h2>\n")
+		fmt.Fprintf(&sb, "<!-- /wp:heading -->\n")
 
-	fmt.Fprintf(&sb, "<!-- wp:table {\"hasFixedLayout\":false,\"align\":\"left\",\"className\":\"is-style-regular\"} -->\n")
-	fmt.Fprintf(&sb, "<figure class=\"wp-block-table alignleft is-style-regular\">\n")
-	fmt.Fprintf(&sb, "<table><thead><tr><th>Date</th><th>Price</th><th>Categories</th><th>Event &amp; Link</th></tr></thead><tbody>\n")
+		fmt.Fprintf(&sb, "<!-- wp:table {\"hasFixedLayout\":false,\"align\":\"left\",\"className\":\"is-style-regular\"} -->\n")
+		fmt.Fprintf(&sb, "<figure class=\"wp-block-table alignleft is-style-regular\">\n")
+		fmt.Fprintf(&sb, "<table><thead><tr><th>Date</th><th>Price</th><th>Categories</th><th>Event &amp; Link</th></tr></thead><tbody>\n")
 
-	for _, event := range allEvents {
-		if !event.Include {
-			fmt.Fprintf(&sb, "<tr><td>%s</td><td>%s</td><td>", event.Date, event.Price)
+		for _, event := range allEvents {
+			if !event.Include {
+				fmt.Fprintf(&sb, "<tr><td>%s</td><td>%s</td><td>", event.Date, event.Price)
+				for _, category := range event.Categories {
+					// find a color
+					color := palette[0]
+					for i, cat := range append(cliOptions.Include, cliOptions.Exclude...) {
+						if cat == category {
+							color = palette[i%len(palette)]
+							break
+						}
+					}
+					fmt.Fprintf(&sb, "<mark style=\"background-color:%s\" class=\"has-inline-color has-white-color\"> %s </mark> ", color.Hex(), category)
+				}
+				fmt.Fprintf(&sb, "</td><td><a href=\"%s\">%s</a></td></tr>\n", event.Link, html.EscapeString(event.Name))
+			}
+		}
+
+		fmt.Fprintf(&sb, "</tbody></table></figure>\n")
+		fmt.Fprintf(&sb, "<!-- /wp:table -->\n")
+	}
+
+	return sb.String()
+}
+
+func generateTablePress() string {
+
+	type tablePressOptions struct {
+		TableHead                  int    `json:"table_head"`
+		TableFoot                  int    `json:"table_foot"`
+		AlternatingRowColors       bool   `json:"alternating_row_colors"`
+		RowHover                   bool   `json:"row_hover"`
+		PrintName                  bool   `json:"print_name"`
+		PrintNamePositition        string `json:"print_name_position"`
+		PrintDescription           bool   `json:"print_description"`
+		PrintDescriptionPositition string `json:"print_description_position"`
+		ExtraCssClasses            string `json:"extra_css_classes"`
+		UseDataTables              bool   `json:"use_datatables"`
+		DataTablesSort             bool   `json:"datatables_sort"`
+		DataTablesFilter           bool   `json:"datatables_filter"`
+		DataTablesPaginate         bool   `json:"datatables_paginate"`
+		DataTablesLengthChange     bool   `json:"datatables_lengthchange"`
+		DataTablesPaginateEntries  int    `json:"datatables_paginate_entries"`
+		DataTablesInfo             bool   `json:"datatables_info"`
+		DataTablesScrollX          bool   `json:"datatables_scrollx"`
+		DataTablesCustomCommand    string `json:"datatables_custom_commands"`
+	}
+	type visibility struct {
+		Rows    []int `json:"rows"`
+		Columns []int `json:"columns"`
+	}
+	type tablePress struct {
+		Name        string            `json:"name"`
+		Description string            `json:"description"`
+		Data        [][]string        `json:"data"`
+		Options     tablePressOptions `json:"options"`
+		Visibility  visibility        `json:"visibility"`
+	}
+
+	var tablePressStruct tablePress
+
+	tablePressStruct.Options.TableHead = 1
+	tablePressStruct.Options.TableFoot = 0
+	tablePressStruct.Options.AlternatingRowColors = true
+	tablePressStruct.Options.RowHover = true
+	tablePressStruct.Options.PrintName = true
+	tablePressStruct.Options.PrintNamePositition = "above"
+	tablePressStruct.Options.PrintDescription = true
+	tablePressStruct.Options.PrintDescriptionPositition = "above"
+	tablePressStruct.Options.UseDataTables = true
+	tablePressStruct.Options.DataTablesSort = false
+	tablePressStruct.Options.DataTablesFilter = true
+	tablePressStruct.Options.DataTablesPaginate = true
+	tablePressStruct.Options.DataTablesLengthChange = true
+	tablePressStruct.Options.DataTablesPaginateEntries = 20
+	tablePressStruct.Options.DataTablesInfo = true
+	tablePressStruct.Options.DataTablesScrollX = false
+
+	tablePressStruct.Name = fmt.Sprintf("External events %s to %s", cliOptions.StartDate, cliOptions.EndDate)
+	tablePressStruct.Description = "This is a list of events you may be interested in."
+
+	tablePressStruct.Data = append(tablePressStruct.Data, []string{"Row (hidden)", "Date", "Price", "Categories", "Event & Link"})
+	tablePressStruct.Visibility.Rows = append(tablePressStruct.Visibility.Rows, 1)
+	tablePressStruct.Visibility.Columns = []int{0, 1, 1, 1, 1}
+
+	for i, event := range allEvents {
+		if !cliOptions.OutputExcluded && !event.Include {
+			// skip
+		} else {
+			categories := ""
 			for _, category := range event.Categories {
 				// find a color
 				color := palette[0]
@@ -1021,109 +1112,19 @@ func generateTable() string {
 						break
 					}
 				}
-				fmt.Fprintf(&sb, "<mark style=\"background-color:%s\" class=\"has-inline-color has-white-color\"> %s </mark> ", color.Hex(), category)
+				categories = categories + fmt.Sprintf("<mark style=\"background-color:%s\" class=\"has-inline-color has-white-color\"> %s </mark> ", color.Hex(), category)
 			}
-			fmt.Fprintf(&sb, "</td><td><a href=\"%s\">%s</a></td></tr>\n", event.Link, html.EscapeString(event.Name))
-		}
-	}
-
-	fmt.Fprintf(&sb, "</tbody></table></figure>\n")
-	fmt.Fprintf(&sb, "<!-- /wp:table -->\n")
-
-	return sb.String()
-}
-
-func generateTablePress() string {
-	var sb strings.Builder
-
-	// sort & display
-	//
-
-	fmt.Fprintf(&sb, "{\n")
-	fmt.Fprintf(&sb, "  \"name\": \"External events %s to %s\",\n", cliOptions.StartDate, cliOptions.EndDate)
-	fmt.Fprintf(&sb, "  \"description\": \"This is a list of events you may be interested in.\",\n")
-	fmt.Fprintf(&sb, "  \"data\": [\n")
-	fmt.Fprintf(&sb, "    [\n")
-	fmt.Fprintf(&sb, "      \"Row (hidden)\",\n")
-	fmt.Fprintf(&sb, "      \"Date\",\n")
-	fmt.Fprintf(&sb, "      \"Price\",\n")
-	fmt.Fprintf(&sb, "      \"Categories\",\n")
-	fmt.Fprintf(&sb, "      \"Event & Link\"\n")
-	fmt.Fprintf(&sb, "    ],\n")
-
-	for i, event := range allEvents {
-		fmt.Fprintf(&sb, "    [\n")
-		fmt.Fprintf(&sb, "      \"%d\",\n", i+1)
-		fmt.Fprintf(&sb, "      \"%s \",\n", event.Date)
-		fmt.Fprintf(&sb, "      \"%s \",\n", event.Price)
-		fmt.Fprintf(&sb, "      \"")
-		for _, category := range event.Categories {
-			// find a color
-			color := palette[0]
-			for i, cat := range append(cliOptions.Include, cliOptions.Exclude...) {
-				if cat == category {
-					color = palette[i%len(palette)]
-					break
-				}
+			description := fmt.Sprintf("<a href=\"%s\">%s</a>\n", event.Link, html.EscapeString(event.Name))
+			tablePressStruct.Data = append(tablePressStruct.Data, []string{strconv.Itoa(i + 1), event.Date, event.Price, categories, description})
+			if event.Include {
+				tablePressStruct.Visibility.Rows = append(tablePressStruct.Visibility.Rows, 1)
+			} else {
+				tablePressStruct.Visibility.Rows = append(tablePressStruct.Visibility.Rows, 0)
 			}
-			fmt.Fprintf(&sb, "<mark style=\\\"background-color:%s\\\" class=\\\"has-inline-color has-white-color\\\"> %s </mark> ", color.Hex(), category)
-		}
-		fmt.Fprintf(&sb, "\",\n")
-		fmt.Fprintf(&sb, "      \"<a href=\\\"%s\\\">%s</a>\"\n", event.Link, html.EscapeString(event.Name)) // might need to escape " here
-		if i+1 < len(allEvents) {
-			fmt.Fprintf(&sb, "    ],\n")
-		} else {
-			fmt.Fprintf(&sb, "    ]\n")
 		}
 	}
 
-	fmt.Fprintf(&sb, "  ],\n")
-	fmt.Fprintf(&sb, "  \"options\": {\n")
-	fmt.Fprintf(&sb, "    \"table_head\": 1,\n")
-	fmt.Fprintf(&sb, "    \"table_foot\": 0,\n")
-	fmt.Fprintf(&sb, "    \"alternating_row_colors\": true,\n")
-	fmt.Fprintf(&sb, "    \"row_hover\": true,\n")
-	fmt.Fprintf(&sb, "    \"print_name\": true,\n")
-	fmt.Fprintf(&sb, "    \"print_name_position\": \"above\",\n")
-	fmt.Fprintf(&sb, "    \"print_description\": true,\n")
-	fmt.Fprintf(&sb, "    \"print_description_position\": \"above\",\n")
-	fmt.Fprintf(&sb, "    \"extra_css_classes\": \"\",\n")
-	fmt.Fprintf(&sb, "    \"use_datatables\": true,\n")
-	fmt.Fprintf(&sb, "    \"datatables_sort\": false,\n")
-	fmt.Fprintf(&sb, "    \"datatables_filter\": true,\n")
-	fmt.Fprintf(&sb, "    \"datatables_paginate\": true,\n")
-	fmt.Fprintf(&sb, "    \"datatables_lengthchange\": true,\n")
-	fmt.Fprintf(&sb, "    \"datatables_paginate_entries\": 20,\n")
-	fmt.Fprintf(&sb, "    \"datatables_info\": true,\n")
-	fmt.Fprintf(&sb, "    \"datatables_scrollx\": false,\n")
-	fmt.Fprintf(&sb, "    \"datatables_custom_commands\": \"\"\n")
-	fmt.Fprintf(&sb, "  },\n")
+	tablePressJson, _ := json.Marshal(tablePressStruct)
 
-	fmt.Fprintf(&sb, "  \"visibility\": {\n")
-	fmt.Fprintf(&sb, "    \"rows\": [\n")
-	fmt.Fprintf(&sb, "      1,\n")
-	for i, event := range allEvents {
-		if event.Include {
-			fmt.Fprintf(&sb, "      1")
-		} else {
-			fmt.Fprintf(&sb, "      0")
-		}
-		if i+1 < len(allEvents) {
-			fmt.Fprintf(&sb, ",\n")
-		} else {
-			fmt.Fprintf(&sb, "\n")
-		}
-	}
-	fmt.Fprintf(&sb, "    ],\n")
-	fmt.Fprintf(&sb, "    \"columns\": [\n")
-	fmt.Fprintf(&sb, "      0,\n")
-	fmt.Fprintf(&sb, "      1,\n")
-	fmt.Fprintf(&sb, "      1,\n")
-	fmt.Fprintf(&sb, "      1,\n")
-	fmt.Fprintf(&sb, "      1\n")
-	fmt.Fprintf(&sb, "    ]\n")
-	fmt.Fprintf(&sb, "  }\n")
-	fmt.Fprintf(&sb, "}\n")
-
-	return sb.String()
+	return string(tablePressJson)
 }

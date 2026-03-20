@@ -392,6 +392,9 @@ testfacebook: ${BINDIR}/${FACEBOOK_NAME}
 
 testevents: ${BINDIR}/${events_NAME}
 	${BINDIR}/${events_NAME} --help
+		${BINDIR}/${events_NAME} --save test.json --headless --outputexcluded --reclassify --maxpage=1 --format=tablepress \
+		--include Logic --include "Pure mathematics" \
+		--exclude Economics --exclude Accounting
 	${BINDIR}/${events_NAME} --headless --reclassify --maxpage=1 --format=list \
 		--include Logic --include "Pure mathematics" \
 		--exclude Economics --exclude Accounting
