@@ -34,12 +34,8 @@ func eventbrite() {
 
 			var url string
 			// https://www.eventbrite.com/d/online/free--science-and-tech--events/?page=1&start_date=2026-03-09&end_date=2026-03-23&lang=en
+			url = "https://www.eventbrite.com/d/online/" + price + "--" + cliOptions.Category + "--events/?page=" + strconv.Itoa(ebPage) + "&start_date=" + startDate.Format("2006-01-02") + "&end_date=" + endDate.Format("2006-01-02") + "&lang=en"
 
-			if cliOptions.StartDate != "" {
-				url = "https://www.eventbrite.com/d/online/" + price + "--" + cliOptions.Category + "--events/?page=" + strconv.Itoa(ebPage) + "&start_date=" + startDate.Format("2006-01-02") + "&end_date=" + endDate.Format("2006-01-02") + "&lang=en"
-			} else {
-				url = "https://www.eventbrite.com/d/online/" + price + "--" + cliOptions.Category + "--events--" + cliOptions.Date + "/?page=" + strconv.Itoa(ebPage) + "&lang=en"
-			}
 			fmt.Fprintf(os.Stderr, "Fetching %s\n", url)
 			_, err := page1.Goto(url, playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 			if err != nil {
@@ -267,7 +263,7 @@ func eventbrite() {
 					elapsed := time.Since(start)
 					fmt.Fprintf(os.Stderr, "Done running pipeline ... took %s\n", elapsed)
 
-					err = eventCache.Set(Cache{Title: title, Description: description, Categories: categories, Price: eventPrice}, link)
+					err = eventCache.Set(Cache{Title: title, Description: description, Date: dt.Time.Local().Format("Mon 2 Jan 3:04PM"), Categories: categories, Price: eventPrice}, link)
 					if err != nil {
 						panic(fmt.Sprintf("Could set cache %v", err))
 					}
@@ -314,6 +310,7 @@ func eventbrite() {
 					fmt.Fprintf(os.Stderr, "Event excluded %s\n\n", strings.Join(categories, ","))
 					continue
 				} else {
+					eventBriteIncluded++
 					allEvents = append(allEvents, Event{Sort: dt.Time.Unix(), Name: title, Date: dt.Time.Local().Format("Mon 2 Jan 3:04PM"), Link: link, Categories: categories, Include: true, Description: description, Price: eventPrice})
 					fmt.Fprintf(os.Stderr, "Event included %s\n\n", strings.Join(categories, ","))
 				}

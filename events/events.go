@@ -31,9 +31,8 @@ import (
 type Options struct {
 	Headless       bool     `short:"e" long:"headless" description:"Headless mode" env:"HEADLESS"`
 	Category       string   `short:"c" long:"category" description:"Category" default:"science-and-tech" env:"CATEGORY"`
-	Date           string   `short:"d" long:"date" description:"Date" default:"next-month" default:"" env:"DATE"`
-	StartDate      string   `short:"s" long:"startdate" description:"Start date (YYYY-MM-DD)" env:"STARTDATE"`
-	EndDate        string   `short:"a" long:"enddate" description:"End date (YYYY-MM-DD)" env:"ENDDATE"`
+	StartDate      string   `short:"s" long:"startdate" description:"Start date (YYYY-MM-DD)" default:"2026-01-01" env:"STARTDATE"`
+	EndDate        string   `short:"a" long:"enddate" description:"End date (YYYY-MM-DD)" default:"2030-01-01" env:"ENDDATE"`
 	MaxPrice       float64  `short:"p" long:"maxprice" description:"Max price for event (£)" default:"20" env:"PRICE"`
 	Nighttime      bool     `short:"n" long:"nighttime" description:"Include nighttime events" env:"NIGHTTIME"`
 	Maxpage        int      `short:"m" long:"maxpage" description:"Max page number to fetch" default:"1000" env:"MAXPAGE"`
@@ -68,6 +67,7 @@ type Cache struct {
 	Title       string
 	Description string
 	Price       string
+	Date        string
 	Categories  []string
 }
 
@@ -122,6 +122,8 @@ var eventsSkippedByDescription = 0
 var eventsSkippedByNightTime = 0
 var eventsSkippedByPrice = 0
 var eventsErrors = 0
+var eventBriteIncluded = 0
+var greshamIncluded = 0
 
 // if found in the cache, must still re-classify since categories have changed
 var mustClassify = false
@@ -250,44 +252,47 @@ func main() {
 		panic(fmt.Sprintf("could not create pipeline: %v", err))
 	}
 
-	// setup
+	// setup web browser windows
 	//
-	page := utils.StartCamoufox(cliOptions.Headless)
-	defer utils.Finish(page)
+	page1 = utils.StartCamoufox(cliOptions.Headless)
+	defer utils.Finish(page1)
 
-	newContext, err := page.Context().Browser().NewContext()
+	newContext, err := page1.Context().Browser().NewContext()
 	if err != nil {
 		panic(fmt.Sprintf("could not open new page: %v", err))
 	}
-	page2, err := newContext.NewPage()
+	page2, err = newContext.NewPage()
 	if err != nil {
 		panic(fmt.Sprintf("could not open new page: %v", err))
 	}
 	defer utils.Finish(page2)
 
+	// get events
+	//
 	eventbrite()
+	gresham()
 
+	// summary report
+	//
 	fmt.Printf("events has been run with the following options :\n")
 	fmt.Printf("	Headless=%v\n", cliOptions.Headless)
 	fmt.Printf("	Category=%s\n", cliOptions.Category)
-	if cliOptions.Date != "" {
-		fmt.Printf("	Date=%s\n", cliOptions.Date)
-	} else {
-		fmt.Printf("	Date=%s to %s\n", cliOptions.StartDate, cliOptions.EndDate)
-	}
+	fmt.Printf("	Date=%s to %s\n", cliOptions.StartDate, cliOptions.EndDate)
 	fmt.Printf("	Nighttime=%v\n", cliOptions.Nighttime)
 	fmt.Printf("	Maxpage=%d\n", cliOptions.Maxpage)
 	fmt.Printf("	Format=%s\n", cliOptions.Format)
 	fmt.Printf("	Max price=£%.2f\n", cliOptions.MaxPrice)
 	fmt.Printf("	Include=%s\n", strings.Join(cliOptions.Include, ","))
 	fmt.Printf("	Exclude=%s\n", strings.Join(cliOptions.Exclude, ","))
-	fmt.Printf("	Output excluded=%v\n", cliOptions.OutputExcluded)
+	fmt.Printf("	Output excluded=%v (either via seperate tables or hidden rows)\n", cliOptions.OutputExcluded)
 	fmt.Printf("	Machine learning model %s with %s backend\n", mlModel, mlBackend)
 	fmt.Printf("\n")
 	fmt.Printf("There were %d events found.  Of which :\n", eventsFound)
 	fmt.Printf("	%d were skipped due to excluded categories match\n", eventsSkippedByDescription)
 	fmt.Printf("	%d were skipped due to nighttime\n", eventsSkippedByNightTime)
 	fmt.Printf("	%d were skipped due to high price\n", eventsSkippedByPrice)
+	fmt.Printf("	%d were included from eventbrite\n", eventBriteIncluded)
+	fmt.Printf("	%d were included from gresham\n", greshamIncluded)
 	fmt.Printf("	%d errors\n", eventsErrors)
 	fmt.Printf("\n")
 
@@ -297,45 +302,35 @@ func main() {
 		return allEvents[i].Sort < allEvents[j].Sort
 	})
 
-	// and generate
+	// colour pallet
 	//
-
 	palette, err = colorful.HappyPalette(len(cliOptions.Include) + len(cliOptions.Exclude))
 	if err != nil {
 		panic(fmt.Sprintf("could not generate colors: %v", err))
 	}
-
 	fmt.Printf("Colour palette is:\n")
-
 	for i, category := range append(cliOptions.Include, cliOptions.Exclude...) {
 		fmt.Printf("	%s - <mark style=\"background-color:%s\" class=\"has-inline-color has-white-color\"> %s </mark>\n", category, palette[i].Hex(), category)
 	}
 	fmt.Printf("\n")
 
+	fmt.Printf("Attached json files can be imported into wordpress tablepress - simply dragging the file from email to\n")
+	fmt.Printf("wordpress tablepress import field should work.\n")
+	fmt.Printf("\n")
+
+	fmt.Printf("Attached wordpress html files can be cut&pasted onto your page.  Switch to the `Code editor` (top right menu),\n")
+	fmt.Printf("paste then switch back to `Visual editor`.  A cut&paste to the mailpoet editor should also work.\n")
+	fmt.Printf("\n")
+
+	// and generate report
+	//
 	report := ""
 	switch cliOptions.Format {
 	case "list":
-
-		fmt.Printf("Below is generated wordpress source which can be cut&pasted onto your page.\n")
-		fmt.Printf("Switch to the `Code editor` (top right menu), paste then switch back to `Visual editor`.\n")
-		fmt.Printf("\n")
-
 		report = generateList()
-
 	case "table":
-
-		fmt.Printf("Below is generated wordpress source which can be cut&pasted onto your page.\n")
-		fmt.Printf("Switch to the `Code editor` (top right menu), paste then switch back to `Visual editor`.\n")
-		fmt.Printf("\n")
-
 		report = generateTable()
-
 	default:
-
-		fmt.Printf("Below is generated tablepress in json.  Use the TablePress menu in wordpress to import\n")
-		fmt.Printf("this to a new table and then add that TablePress to your page.\n")
-		fmt.Printf("\n")
-
 		report = generateTablePress()
 	}
 
@@ -359,11 +354,7 @@ func generateList() string {
 	var sb strings.Builder
 
 	fmt.Fprintf(&sb, "<!-- wp:heading -->\n")
-	if cliOptions.StartDate != "" {
-		fmt.Fprintf(&sb, "<h2 class=\"wp-block-heading\">%s to %s</h2>\n", cliOptions.StartDate, cliOptions.EndDate)
-	} else {
-		fmt.Fprintf(&sb, "<h2 class=\"wp-block-heading\">%s</h2>\n", cliOptions.Date)
-	}
+	fmt.Fprintf(&sb, "<h2 class=\"wp-block-heading\">%s to %s</h2>\n", cliOptions.StartDate, cliOptions.EndDate)
 	fmt.Fprintf(&sb, "<!-- /wp:heading -->\n")
 
 	fmt.Fprintf(&sb, "<!-- wp:list --><ul class=\"wp-block-list\">\n")
@@ -428,11 +419,7 @@ func generateTable() string {
 	//
 
 	fmt.Printf("<!-- wp:heading -->\n")
-	if cliOptions.StartDate != "" {
-		fmt.Fprintf(&sb, "<h2 class=\"wp-block-heading\">%s to %s</h2>\n", cliOptions.StartDate, cliOptions.EndDate)
-	} else {
-		fmt.Fprintf(&sb, "<h2 class=\"wp-block-heading\">%s</h2>\n", cliOptions.Date)
-	}
+	fmt.Fprintf(&sb, "<h2 class=\"wp-block-heading\">%s to %s</h2>\n", cliOptions.StartDate, cliOptions.EndDate)
 	fmt.Fprintf(&sb, "<!-- /wp:heading -->\n")
 
 	fmt.Fprintf(&sb, "<!-- wp:table {\"hasFixedLayout\":false,\"align\":\"left\",\"className\":\"is-style-regular\"} -->\n")

@@ -38,7 +38,7 @@ FACEBOOK_SOURCE=${FACEBOOK_NAME}/${FACEBOOK_NAME}.go
 LAUNCH_NAME=launch
 LAUNCH_SOURCE=${LAUNCH_NAME}/constants.go ${LAUNCH_NAME}/exec.go ${LAUNCH_NAME}/load-addons.go ${LAUNCH_NAME}/main.go ${LAUNCH_NAME}/procgroup-unix.go ${LAUNCH_NAME}/procgroup-win.go ${LAUNCH_NAME}/validate.go ${LAUNCH_NAME}/xpi-dl.go
 EVENTS_NAME=events
-EVENTS_SOURCE=${EVENTS_NAME}/${EVENTS_NAME}.go ${EVENTS_NAME}/perftests.go ${EVENTS_NAME}/cachetests.go ${EVENTS_NAME}/exchangerates.go ${EVENTS_NAME}/eventbrite.go
+EVENTS_SOURCE=${EVENTS_NAME}/${EVENTS_NAME}.go ${EVENTS_NAME}/perftests.go ${EVENTS_NAME}/cachetests.go ${EVENTS_NAME}/exchangerates.go ${EVENTS_NAME}/eventbrite.go ${EVENTS_NAME}/gresham.go
 
 # local local builds/tests
 #
@@ -393,15 +393,19 @@ testfacebook: ${BINDIR}/${FACEBOOK_NAME}
 testevents: ${BINDIR}/${EVENTS_NAME}
 	${BINDIR}/${EVENTS_NAME} --help
 		${BINDIR}/${EVENTS_NAME} --save test.json --headless --outputexcluded --reclassify --maxpage=1 --format=tablepress \
+		--startdate $(shell date +%Y-%m-%d) --enddate $(shell date +%Y-%m-%d) \
 		--include Logic --include "Pure mathematics" \
 		--exclude Economics --exclude Accounting
 	${BINDIR}/${EVENTS_NAME} --headless --reclassify --maxpage=1 --format=list \
+		--startdate $(shell date +%Y-%m-%d) --enddate $(shell date +%Y-%m-%d) \
 		--include Logic --include "Pure mathematics" \
 		--exclude Economics --exclude Accounting
 	${BINDIR}/${EVENTS_NAME} --headless --reclassify --maxpage=1 --format=table \
+	 	--startdate $(shell date +%Y-%m-%d) --enddate $(shell date +%Y-%m-%d) \
 		--include Logic --include "Pure mathematics" \
 		--exclude Economics --exclude Accounting
 	${BINDIR}/${EVENTS_NAME} --perftest --headless --maxpage=1 --reclassify --format=tablepress \
+		--startdate $(shell date +%Y-%m-%d) --enddate $(shell date +%Y-%m-%d) \
 		--include Physics --include Energy  --include Quantum \
 		--include Chemistry  \
 		--include "Materials science" \
