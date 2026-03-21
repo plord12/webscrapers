@@ -41,7 +41,9 @@ func eventbrite() {
 			if err != nil {
 				_, err = page1.Goto(url, playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 				if err != nil {
-					panic(fmt.Sprintf("could not goto url: %v", err))
+					fmt.Fprintf(os.Stderr, "could not goto url: %v\n", err)
+					fmt.Fprintf(os.Stderr, "\n")
+					break
 				}
 			}
 
@@ -50,11 +52,7 @@ func eventbrite() {
 			//page.GetByText("Reject all", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click(playwright.LocatorClickOptions{Timeout: playwright.Float(2000.0)})
 
 			events, err := page1.Locator(".event-card-details").Filter(playwright.LocatorFilterOptions{Visible: playwright.Bool(true)}).All()
-			if err != nil {
-				panic("Could not find links")
-			}
-
-			if len(events) == 0 {
+			if err != nil || len(events) == 0 {
 				// no more pages
 				break
 			}
@@ -87,12 +85,14 @@ func eventbrite() {
 				link, err := event.Locator(".event-card-link").First().GetAttribute("href")
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Could not find link ... skipping\n")
+					fmt.Fprintf(os.Stderr, "\n")
 					eventsErrors++
 					continue
 				}
 				title, err := event.Locator(".event-card-link").First().TextContent()
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Could not find text ... skipping\n")
+					fmt.Fprintf(os.Stderr, "\n")
 					eventsErrors++
 					continue
 				}
@@ -115,6 +115,7 @@ func eventbrite() {
 				paragraphs, err := event.Locator("p").All()
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Could not find date ... skipping\n")
+					fmt.Fprintf(os.Stderr, "\n")
 					eventsErrors++
 					continue
 				}
@@ -146,6 +147,7 @@ func eventbrite() {
 
 				if !found {
 					fmt.Fprintf(os.Stderr, "Could not parse date ... skipping\n")
+					fmt.Fprintf(os.Stderr, "\n")
 					eventsErrors++
 					continue
 				}
@@ -168,6 +170,7 @@ func eventbrite() {
 					elapsed := time.Since(start)
 					if err != nil {
 						fmt.Fprintf(os.Stderr, "Could not open '%s' ... skipping\n", link)
+						fmt.Fprintf(os.Stderr, "\n")
 						eventsErrors++
 						continue
 					}
@@ -184,6 +187,7 @@ func eventbrite() {
 							fmt.Fprintf(os.Stderr, "Could not read '%s' ... skipping\n", link)
 							eventsErrors++
 							allEvents = append(allEvents, Event{Sort: dt.Time.Unix(), Name: title, Date: dt.Time.Local().Format("Mon 2 Jan 3:04PM"), Link: link, Categories: []string{"Link error"}, Include: false})
+							fmt.Fprintf(os.Stderr, "\n")
 							continue
 						}
 					}
@@ -307,12 +311,14 @@ func eventbrite() {
 
 				if skipped {
 					allEvents = append(allEvents, Event{Sort: dt.Time.Unix(), Name: title, Date: dt.Time.Local().Format("Mon 2 Jan 3:04PM"), Link: link, Categories: categories, Include: false, Description: description, Price: eventPrice})
-					fmt.Fprintf(os.Stderr, "Event excluded %s\n\n", strings.Join(categories, ","))
+					fmt.Fprintf(os.Stderr, "Event excluded %s\n", strings.Join(categories, ","))
+					fmt.Fprintf(os.Stderr, "\n")
 					continue
 				} else {
 					eventBriteIncluded++
 					allEvents = append(allEvents, Event{Sort: dt.Time.Unix(), Name: title, Date: dt.Time.Local().Format("Mon 2 Jan 3:04PM"), Link: link, Categories: categories, Include: true, Description: description, Price: eventPrice})
-					fmt.Fprintf(os.Stderr, "Event included %s\n\n", strings.Join(categories, ","))
+					fmt.Fprintf(os.Stderr, "Event included %s\n", strings.Join(categories, ","))
+					fmt.Fprintf(os.Stderr, "\n")
 				}
 			}
 

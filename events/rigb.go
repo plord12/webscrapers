@@ -31,7 +31,8 @@ func rigb() {
 	if err != nil {
 		_, err = page1.Goto(url, playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
 		if err != nil {
-			panic(fmt.Sprintf("could not goto url: %v", err))
+			fmt.Fprintf(os.Stderr, "could not goto url: %v", err)
+			return
 		}
 	}
 
@@ -46,11 +47,7 @@ func rigb() {
 		}
 
 		events, err := page1.Locator(".o-teaser__content").Filter(playwright.LocatorFilterOptions{Visible: playwright.Bool(true)}).All()
-		if err != nil {
-			panic("Could not find links")
-		}
-
-		if len(events) == 0 {
+		if err != nil || len(events) == 0 {
 			// no more pages
 			break
 		}
@@ -107,6 +104,7 @@ func rigb() {
 				elapsed := time.Since(start)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Could not open '%s' ... skipping\n", link)
+					fmt.Fprintf(os.Stderr, "\n")
 					eventsErrors++
 					continue
 				}
@@ -115,6 +113,7 @@ func rigb() {
 				d, err := page2.Locator(".datetime").First().GetAttribute("datetime")
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Could not find date ... skipping\n")
+					fmt.Fprintf(os.Stderr, "\n")
 					eventsErrors++
 					continue
 				}
@@ -124,6 +123,7 @@ func rigb() {
 				dt, err = dateparser.Parse(nil, d)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Could not parse date ... skipping\n")
+					fmt.Fprintf(os.Stderr, "\n")
 					eventsErrors++
 					continue
 				}
@@ -131,6 +131,7 @@ func rigb() {
 				eventPrice, err = page2.Locator(".o-sidebar__price").First().InnerText()
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Could not find eventPrice ... skipping\n")
+					fmt.Fprintf(os.Stderr, "\n")
 					eventsErrors++
 					continue
 				}
@@ -138,6 +139,7 @@ func rigb() {
 				description, err = page2.Locator(".m-entity__text").First().InnerText()
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Could not read description '%s' ... skipping\n", link)
+					fmt.Fprintf(os.Stderr, "\n")
 					eventsErrors++
 					allEvents = append(allEvents, Event{Sort: dt.Time.Unix(), Name: title, Date: dt.Time.Local().Format("Mon 2 Jan 3:04PM"), Link: link, Categories: []string{"Link error"}, Include: false})
 					continue
@@ -155,6 +157,7 @@ func rigb() {
 
 			if dt.Time.Before(startDate) || dt.Time.After(endDate) {
 				fmt.Fprintf(os.Stderr, "Out of date range %s\n", dt.Time.Local().Format("Mon 2 Jan 3:04PM"))
+				fmt.Fprintf(os.Stderr, "\n")
 				continue
 			}
 
@@ -240,12 +243,14 @@ func rigb() {
 
 			if skipped {
 				allEvents = append(allEvents, Event{Sort: dt.Time.Unix(), Name: title, Date: dt.Time.Local().Format("Mon 2 Jan 3:04PM"), Link: link, Categories: categories, Include: false, Description: description, Price: eventPrice})
-				fmt.Fprintf(os.Stderr, "Event excluded %s\n\n", strings.Join(categories, ","))
+				fmt.Fprintf(os.Stderr, "Event excluded %s\n", strings.Join(categories, ","))
+				fmt.Fprintf(os.Stderr, "\n")
 				continue
 			} else {
 				rigbIncluded++
 				allEvents = append(allEvents, Event{Sort: dt.Time.Unix(), Name: title, Date: dt.Time.Local().Format("Mon 2 Jan 3:04PM"), Link: link, Categories: categories, Include: true, Description: description, Price: eventPrice})
-				fmt.Fprintf(os.Stderr, "Event included %s\n\n", strings.Join(categories, ","))
+				fmt.Fprintf(os.Stderr, "Event included %s\n", strings.Join(categories, ","))
+				fmt.Fprintf(os.Stderr, "\n")
 			}
 		}
 
