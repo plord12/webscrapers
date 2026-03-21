@@ -1,6 +1,6 @@
 /**
 
-find gresham events
+find university of york events
 
 */
 
@@ -9,6 +9,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -18,13 +19,13 @@ import (
 	"github.com/playwright-community/playwright-go"
 )
 
-func gresham() {
+func york() {
 
 	ebPage := 1
 
 	// loop through all pages until we get nothing more ... store results in array for later sorting
 	//
-	url := "https://www.gresham.ac.uk/whats-on?see-all"
+	url := "https://www.york.ac.uk/news-and-events/events/public-lectures/"
 
 	fmt.Fprintf(os.Stderr, "Fetching %s\n", url)
 	_, err := page1.Goto(url, playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
@@ -37,15 +38,14 @@ func gresham() {
 
 	// reject cookie
 	//
-	page1.GetByText("Customize", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click(playwright.LocatorClickOptions{Timeout: playwright.Float(2000.0)})
-	page1.GetByText("Deny", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click(playwright.LocatorClickOptions{Timeout: playwright.Float(2000.0)})
+	page1.GetByText("Reject optional", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click(playwright.LocatorClickOptions{Timeout: playwright.Float(2000.0)})
 
 	for {
 		if ebPage > cliOptions.Maxpage {
 			break
 		}
 
-		events, err := page1.Locator(".o-teaser__content").Filter(playwright.LocatorFilterOptions{Visible: playwright.Bool(true)}).All()
+		events, err := page1.Locator(".uoy_listing_item").Filter(playwright.LocatorFilterOptions{Visible: playwright.Bool(true)}).All()
 		if err != nil {
 			panic("Could not find links")
 		}
@@ -65,7 +65,7 @@ func gresham() {
 				eventsErrors++
 				continue
 			}
-			link = "https://www.gresham.ac.uk" + link
+			link = "https://www.york.ac.uk" + link
 			title, err := event.Locator("a").First().InnerText()
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Could not find text ... skipping\n")
@@ -112,45 +112,51 @@ func gresham() {
 				}
 				fmt.Fprintf(os.Stderr, "Done fetch page ... took %s\n", elapsed)
 
-				paragraphs, err := page2.Locator(".sidebar__information--inner").Filter(playwright.LocatorFilterOptions{Visible: playwright.Bool(true)}).First().Locator("p").All()
-				if err != nil || len(paragraphs) < 3 {
-					fmt.Fprintf(os.Stderr, "Could not find date 1 ... skipping\n")
+				keypoints, err := page2.Locator(".uoy_key_point_text").All()
+				if err != nil || len(keypoints) < 3 {
+					fmt.Fprintf(os.Stderr, "Could not find date ... skipping\n")
 					eventsErrors++
 					continue
 				}
 
-				dateString, err := paragraphs[0].TextContent()
+				d, err := keypoints[0].InnerText()
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "Could not find date 2 ... skipping\n")
+					fmt.Fprintf(os.Stderr, "Could not find date ... skipping\n")
 					eventsErrors++
 					continue
 				}
-				timeString, err := paragraphs[1].TextContent()
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "Could not find time 3 ... skipping\n")
-					eventsErrors++
-					continue
-				}
-				d := strings.NewReplacer("Date: ", "", "Time: ", "").Replace(dateString + " " + timeString) // yuk
 
 				// parse date
 				//
+				re := regexp.MustCompile(` to [0-9.pam]*`)
+				d = re.ReplaceAllString(d, "")
 				dt, err = dateparser.Parse(nil, d)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "Could not parse date ... skipping\n")
+					fmt.Fprintf(os.Stderr, "Could not parse date %s ... skipping\n", d)
 					eventsErrors++
 					continue
 				}
 
-				description, err = page2.Locator(".m-entity__body").First().InnerText()
+				eventPrice, err = keypoints[3].InnerText()
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Could not find eventPrice ... skipping\n")
+					eventsErrors++
+					continue
+				}
+
+				blocks, err := page2.Locator(".uoy_block_wrapper").All()
+				if err != nil || len(blocks) < 4 {
+					fmt.Fprintf(os.Stderr, "Could not find description ... skipping\n")
+					eventsErrors++
+					continue
+				}
+				description, err = blocks[3].InnerText()
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Could not read description '%s' ... skipping\n", link)
 					eventsErrors++
 					allEvents = append(allEvents, Event{Sort: dt.Time.Unix(), Name: title, Date: dt.Time.Local().Format("Mon 2 Jan 3:04PM"), Link: link, Categories: []string{"Link error"}, Include: false})
 					continue
 				}
-
-				eventPrice = "£0.00"
 
 				fetched = true
 			} else {
@@ -252,7 +258,7 @@ func gresham() {
 				fmt.Fprintf(os.Stderr, "Event excluded %s\n\n", strings.Join(categories, ","))
 				continue
 			} else {
-				greshamIncluded++
+				yorkIncluded++
 				allEvents = append(allEvents, Event{Sort: dt.Time.Unix(), Name: title, Date: dt.Time.Local().Format("Mon 2 Jan 3:04PM"), Link: link, Categories: categories, Include: true, Description: description, Price: eventPrice})
 				fmt.Fprintf(os.Stderr, "Event included %s\n\n", strings.Join(categories, ","))
 			}

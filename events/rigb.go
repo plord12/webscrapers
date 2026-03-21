@@ -254,7 +254,7 @@ func rigb() {
 		// click next page
 
 		x, err := page1.GetByText(strconv.Itoa(ebPage), playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).All()
-		if err != nil {
+		if err != nil || len(x) < 1 {
 			break
 		}
 		err = x[len(x)-1].Click(playwright.LocatorClickOptions{Timeout: playwright.Float(1000.0)})
