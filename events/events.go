@@ -124,6 +124,7 @@ var eventsSkippedByPrice = 0
 var eventsErrors = 0
 var eventBriteIncluded = 0
 var greshamIncluded = 0
+var rigbIncluded = 0
 
 // if found in the cache, must still re-classify since categories have changed
 var mustClassify = false
@@ -205,8 +206,6 @@ func main() {
 	}
 	eventCache.Set(Cache{Categories: append(cliOptions.Include, cliOptions.Exclude...)}, "all categories")
 
-	// FIX THIS - add https://www.gresham.ac.uk/watch-now Gresham
-	// FIX THIS - add https://www.rigb.org/whats-on?see-all Royal institution but only the online and there are fees. Booking though Eventbrite
 	// FIX THIS - add https://www.york.ac.uk/news-and-events/events/  Uni of York online variable
 	// FIX THIS - add https://www.ucl.ac.uk/events/all-events UCL online variable
 	// FIX THIS - add https://www.linnean.org/meetings-and-events Linnean Society two or three
@@ -271,6 +270,7 @@ func main() {
 	//
 	eventbrite()
 	gresham()
+	rigb()
 
 	// summary report
 	//
@@ -293,6 +293,7 @@ func main() {
 	fmt.Printf("	%d were skipped due to high price\n", eventsSkippedByPrice)
 	fmt.Printf("	%d were included from eventbrite\n", eventBriteIncluded)
 	fmt.Printf("	%d were included from gresham\n", greshamIncluded)
+	fmt.Printf("	%d were included from royal institution\n", rigbIncluded)
 	fmt.Printf("	%d errors\n", eventsErrors)
 	fmt.Printf("\n")
 
