@@ -268,11 +268,10 @@ func main() {
 
 	// get events
 	//
-	york()
-	panic(0)
 	eventbrite()
 	gresham()
 	rigb()
+	york()
 
 	// summary report
 	//
