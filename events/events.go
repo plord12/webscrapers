@@ -127,6 +127,7 @@ var greshamIncluded = 0
 var rigbIncluded = 0
 var yorkIncluded = 0
 var uclIncluded = 0
+var linneanIncluded = 0
 
 // if found in the cache, must still re-classify since categories have changed
 var mustClassify = false
@@ -208,7 +209,6 @@ func main() {
 	}
 	eventCache.Set(Cache{Categories: append(cliOptions.Include, cliOptions.Exclude...)}, "all categories")
 
-	// FIX THIS - add https://www.linnean.org/meetings-and-events Linnean Society two or three
 	// FIX THIS - add https://www.bcs.org/events-calendar/ BCS (the Chartered Institute for IT) several hybrid or webinar items each month. Booked through Eventbrite. But not all appear under science and tech
 	// FIX THIS - add https://kipac.stanford.edu/events/upcoming-events KIPAC (Kavli Institute for particle Astrophysics and cosmology) Stanford University several items each month
 
@@ -268,11 +268,14 @@ func main() {
 
 	// get events
 	//
+	// FIX THIS - extract common code & make more consistent
+	//
 	eventbrite()
 	gresham()
 	rigb()
 	york()
 	ucl()
+	linnean()
 
 	// summary report
 	//
@@ -298,6 +301,7 @@ func main() {
 	fmt.Printf("	%d were included from royal institution\n", rigbIncluded)
 	fmt.Printf("	%d were included from university of york\n", yorkIncluded)
 	fmt.Printf("	%d were included from university college london\n", uclIncluded)
+	fmt.Printf("	%d were included from linnean\n", linneanIncluded)
 	fmt.Printf("	%d errors\n", eventsErrors)
 	fmt.Printf("\n")
 
