@@ -1,6 +1,6 @@
 /**
 
-find linnean events
+find bcs events
 
 */
 
@@ -9,6 +9,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -18,14 +19,14 @@ import (
 	"github.com/playwright-community/playwright-go"
 )
 
-func linnean() {
+func bcs() {
 
 	ebPage := 1
 
 	// loop through all pages until we get nothing more ... store results in array for later sorting
 	//
 
-	url := "https://www.linnean.org/meetings-and-events/events/"
+	url := "https://www.bcs.org/events-calendar/"
 
 	fmt.Fprintf(os.Stderr, "Fetching %s\n", url)
 	_, err := page1.Goto(url, playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
@@ -40,15 +41,14 @@ func linnean() {
 
 	// reject cookie
 	//
-	page1.GetByText("Got it!", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click(playwright.LocatorClickOptions{Timeout: playwright.Float(2000.0)})
-	page1.GetByText("Close", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click(playwright.LocatorClickOptions{Timeout: playwright.Float(2000.0)})
+	page1.GetByText("Reject cookies", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click(playwright.LocatorClickOptions{Timeout: playwright.Float(2000.0)})
 
 	for {
 		if ebPage > cliOptions.Maxpage {
 			break
 		}
 
-		events, err := page1.Locator(".leading-5").Filter(playwright.LocatorFilterOptions{Visible: playwright.Bool(true)}).All()
+		events, err := page1.Locator(".postlistitem").Filter(playwright.LocatorFilterOptions{Visible: playwright.Bool(true)}).All()
 		if err != nil || len(events) == 0 {
 			// no more pages
 			break
@@ -58,13 +58,14 @@ func linnean() {
 			eventsFound++
 			skipped := false
 
-			link, err := event.Locator("a").First().GetAttribute("href")
+			link, err := event.GetAttribute("href", playwright.LocatorGetAttributeOptions{Timeout: playwright.Float(2000.0)})
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Could not find link ... skipping\n")
 				eventsErrors++
 				continue
 			}
-			title, err := event.Locator("a").First().InnerText()
+			link = "https://www.bcs.org" + link
+			title, err := event.InnerText()
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Could not find text ... skipping\n")
 				eventsErrors++
@@ -111,9 +112,17 @@ func linnean() {
 				}
 				fmt.Fprintf(os.Stderr, "Done fetch page ... took %s\n", elapsed)
 
-				d, err := page2.Locator("time").First().GetAttribute("datetime")
+				paragraphs, err := page2.Locator(".eventinfo-subtitle").Filter(playwright.LocatorFilterOptions{Visible: playwright.Bool(true)}).All()
+				if err != nil || len(paragraphs) < 3 {
+					fmt.Fprintf(os.Stderr, "Could not find date 1 ... skipping\n")
+					fmt.Fprintf(os.Stderr, "\n")
+					eventsErrors++
+					continue
+				}
+
+				d, err := paragraphs[0].TextContent()
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "Could not find date ... skipping\n")
+					fmt.Fprintf(os.Stderr, "Could not find date 2 ... skipping\n")
 					fmt.Fprintf(os.Stderr, "\n")
 					eventsErrors++
 					continue
@@ -129,9 +138,13 @@ func linnean() {
 					continue
 				}
 
-				eventPrice = "£0.00"
+				eventPrice, err = paragraphs[2].TextContent()
+				re := regexp.MustCompile(`^\s*`)
+				eventPrice = re.ReplaceAllString(eventPrice, "")
+				re = regexp.MustCompile(`\s*$`)
+				eventPrice = re.ReplaceAllString(eventPrice, "")
 
-				description, err = page2.Locator("tg-event-description-tab").First().InnerText()
+				description, err = page2.Locator(".usercontent").First().InnerText()
 
 				fetched = true
 			} else {
@@ -235,7 +248,7 @@ func linnean() {
 				fmt.Fprintf(os.Stderr, "\n")
 				continue
 			} else {
-				linneanIncluded++
+				bcsIncluded++
 				allEvents = append(allEvents, Event{Sort: dt.Time.Unix(), Name: title, Date: dt.Time.Local().Format("Mon 2 Jan 3:04PM"), Link: link, Categories: categories, Include: true, Description: description, Price: eventPrice})
 				fmt.Fprintf(os.Stderr, "Event included %s\n", strings.Join(categories, ","))
 				fmt.Fprintf(os.Stderr, "\n")

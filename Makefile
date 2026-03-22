@@ -38,7 +38,7 @@ FACEBOOK_SOURCE=${FACEBOOK_NAME}/${FACEBOOK_NAME}.go
 LAUNCH_NAME=launch
 LAUNCH_SOURCE=${LAUNCH_NAME}/constants.go ${LAUNCH_NAME}/exec.go ${LAUNCH_NAME}/load-addons.go ${LAUNCH_NAME}/main.go ${LAUNCH_NAME}/procgroup-unix.go ${LAUNCH_NAME}/procgroup-win.go ${LAUNCH_NAME}/validate.go ${LAUNCH_NAME}/xpi-dl.go
 EVENTS_NAME=events
-EVENTS_SOURCE=${EVENTS_NAME}/${EVENTS_NAME}.go ${EVENTS_NAME}/perftests.go ${EVENTS_NAME}/cachetests.go ${EVENTS_NAME}/exchangerates.go ${EVENTS_NAME}/eventbrite.go ${EVENTS_NAME}/gresham.go ${EVENTS_NAME}/rigb.go ${EVENTS_NAME}/york.go ${EVENTS_NAME}/ucl.go ${EVENTS_NAME}/linnean.go
+EVENTS_SOURCE=${EVENTS_NAME}/${EVENTS_NAME}.go ${EVENTS_NAME}/perftests.go ${EVENTS_NAME}/cachetests.go ${EVENTS_NAME}/exchangerates.go ${EVENTS_NAME}/eventbrite.go ${EVENTS_NAME}/gresham.go ${EVENTS_NAME}/rigb.go ${EVENTS_NAME}/york.go ${EVENTS_NAME}/ucl.go ${EVENTS_NAME}/linnean.go ${EVENTS_NAME}/bcs.go
 
 # local local builds/tests
 #
