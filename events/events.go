@@ -129,6 +129,7 @@ var yorkIncluded = 0
 var uclIncluded = 0
 var linneanIncluded = 0
 var bcsIncluded = 0
+var kipacIncluded = 0
 
 // if found in the cache, must still re-classify since categories have changed
 var mustClassify = false
@@ -210,8 +211,6 @@ func main() {
 	}
 	eventCache.Set(Cache{Categories: append(cliOptions.Include, cliOptions.Exclude...)}, "all categories")
 
-	// FIX THIS - add https://kipac.stanford.edu/events/upcoming-events KIPAC (Kavli Institute for particle Astrophysics and cosmology) Stanford University several items each month
-
 	// machine learning classification
 	//
 	var session *hugot.Session
@@ -277,6 +276,7 @@ func main() {
 	ucl()
 	linnean()
 	bcs()
+	kipac()
 
 	// summary report
 	//
@@ -304,6 +304,7 @@ func main() {
 	fmt.Printf("	%d were included from university college london\n", uclIncluded)
 	fmt.Printf("	%d were included from linnean\n", linneanIncluded)
 	fmt.Printf("	%d were included from bcs\n", bcsIncluded)
+	fmt.Printf("	%d were included from kipac\n", kipacIncluded)
 	fmt.Printf("	%d errors\n", eventsErrors)
 	fmt.Printf("\n")
 
@@ -365,7 +366,7 @@ func generateList() string {
 	var sb strings.Builder
 
 	fmt.Fprintf(&sb, "<!-- wp:heading -->\n")
-	fmt.Fprintf(&sb, "<h2 class=\"wp-block-heading\">%s to %s</h2>\n", cliOptions.StartDate, cliOptions.EndDate)
+	fmt.Fprintf(&sb, "<h2 class=\"wp-block-heading\">%s to %s</h2>\n", startDate.Local().Format("Mon 2 Jan"), endDate.Local().Format("Mon 2 Jan"))
 	fmt.Fprintf(&sb, "<!-- /wp:heading -->\n")
 
 	fmt.Fprintf(&sb, "<!-- wp:list --><ul class=\"wp-block-list\">\n")
@@ -430,7 +431,7 @@ func generateTable() string {
 	//
 
 	fmt.Printf("<!-- wp:heading -->\n")
-	fmt.Fprintf(&sb, "<h2 class=\"wp-block-heading\">%s to %s</h2>\n", cliOptions.StartDate, cliOptions.EndDate)
+	fmt.Fprintf(&sb, "<h2 class=\"wp-block-heading\">%s to %s</h2>\n", startDate.Local().Format("Mon 2 Jan"), endDate.Local().Format("Mon 2 Jan"))
 	fmt.Fprintf(&sb, "<!-- /wp:heading -->\n")
 
 	fmt.Fprintf(&sb, "<!-- wp:table {\"hasFixedLayout\":false,\"align\":\"left\",\"className\":\"is-style-regular\"} -->\n")
@@ -545,8 +546,8 @@ func generateTablePress() string {
 	tablePressStruct.Options.DataTablesInfo = true
 	tablePressStruct.Options.DataTablesScrollX = false
 
-	tablePressStruct.Name = fmt.Sprintf("External events %s to %s", cliOptions.StartDate, cliOptions.EndDate)
-	tablePressStruct.Description = "This is a list of events you may be interested in."
+	tablePressStruct.Name = fmt.Sprintf("External events %s to %s", startDate.Local().Format("Mon 2 Jan"), endDate.Local().Format("Mon 2 Jan"))
+	tablePressStruct.Description = "This list of events has been processed from Eventbrite, Gresham College, Kavli Institute for Particle Astrophysics and Cosmology, The Linnean Society of London, The Royal Institution, University College London and University of York.  Machine learning has been used to add categories and the list was then manually curated.\n\nThe search box below can be used to search and filter for events."
 
 	tablePressStruct.Data = append(tablePressStruct.Data, []string{"Row (hidden)", "Date", "Price", "Categories", "Event & Link"})
 	tablePressStruct.Visibility.Rows = append(tablePressStruct.Visibility.Rows, 1)
