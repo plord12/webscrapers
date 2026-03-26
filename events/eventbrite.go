@@ -158,7 +158,6 @@ func eventbrite() {
 				// see if description is already cached, if so fetch
 				// if not cached do a web query & classify
 				//
-				var categories []string
 				description := ""
 				eventPrice := ""
 				localPrice := 0.0
@@ -221,105 +220,10 @@ func eventbrite() {
 					localPrice, err = convertToGBP(eventPrice)
 				}
 
-				if fetched || mustClassify || cliOptions.Reclassify {
-
-					fmt.Fprintf(os.Stderr, "Running classification\n")
-
-					// classify by description
-					//
-					start := time.Now()
-					limit := maxDescriptionWords
-					words := strings.Split(title+" "+description, " ")
-					if len(words) < limit {
-						limit = len(words)
-					}
-					batch := []string{strings.Join(words[:limit], " ")}
-					batchResult, err := classificationPipeline.RunPipeline(batch)
-					if err != nil {
-						panic(fmt.Sprintf("could not run pipeline: %v", err))
-					}
-					if len(batchResult.GetOutput()) == 1 {
-						for i := range batchResult.ClassificationOutputs[0].SortedValues {
-							if batchResult.ClassificationOutputs[0].SortedValues[i].Value > mlMinScore && i < maxCategoriesPerEvent {
-								categories = append(categories, batchResult.ClassificationOutputs[0].SortedValues[i].Key)
-							}
-						}
-					}
-
-					// if no categories, perhaps try with whole description
-					//
-					if len(categories) == 0 {
-						fmt.Fprintf(os.Stderr, "Running classification again\n")
-						batch = []string{strings.Join(words, " ")}
-						batchResult, err = classificationPipeline.RunPipeline(batch)
-						if err != nil {
-							panic(fmt.Sprintf("could not run pipeline: %v", err))
-						}
-						if len(batchResult.GetOutput()) == 1 {
-							for i := range batchResult.ClassificationOutputs[0].SortedValues {
-								if batchResult.ClassificationOutputs[0].SortedValues[i].Value > mlMinScore && i < maxCategoriesPerEvent {
-									categories = append(categories, batchResult.ClassificationOutputs[0].SortedValues[i].Key)
-								}
-							}
-						}
-					}
-
-					elapsed := time.Since(start)
-					fmt.Fprintf(os.Stderr, "Done running pipeline ... took %s\n", elapsed)
-
-					err = eventCache.Set(Cache{Title: title, Description: description, Date: dt.Time.Local().Format("Mon 2 Jan 3:04PM"), Categories: categories, Price: eventPrice}, link)
-					if err != nil {
-						panic(fmt.Sprintf("Could set cache %v", err))
-					}
-
-				} else {
-					fmt.Fprintf(os.Stderr, "Used classification from cache\n")
-
-					categories = cacheEntry.Categories
-				}
-
-				// add night time
-				//
-				if !cliOptions.Nighttime {
-					if dt.Time.Hour() < nighttimeEndHour || dt.Time.Hour() > nighttimeStartHour {
-						eventsSkippedByNightTime++
-						categories = append(categories, "Night time")
-						skipped = true
-					}
-				}
-
-				// add expensive
-				//
-				if localPrice >= cliOptions.MaxPrice {
-					eventsSkippedByPrice++
-					categories = append(categories, "Expensive")
-					skipped = true
-				}
-
-				for _, category := range categories {
-					for _, exclude := range cliOptions.Exclude {
-						if exclude == category {
-							eventsSkippedByDescription++
-							skipped = true
-							break
-						}
-					}
-					if skipped {
-						break
-					}
-				}
-
-				if skipped {
-					allEvents = append(allEvents, Event{Sort: dt.Time.Unix(), Name: title, Date: dt.Time.Local().Format("Mon 2 Jan 3:04PM"), Link: link, Categories: categories, Include: false, Description: description, Price: eventPrice})
-					fmt.Fprintf(os.Stderr, "Event excluded %s\n", strings.Join(categories, ","))
-					fmt.Fprintf(os.Stderr, "\n")
-					continue
-				} else {
+				if !classify(title, description, link, eventPrice, dt.Time, cacheEntry, fetched || mustClassify || cliOptions.Reclassify) {
 					eventBriteIncluded++
-					allEvents = append(allEvents, Event{Sort: dt.Time.Unix(), Name: title, Date: dt.Time.Local().Format("Mon 2 Jan 3:04PM"), Link: link, Categories: categories, Include: true, Description: description, Price: eventPrice})
-					fmt.Fprintf(os.Stderr, "Event included %s\n", strings.Join(categories, ","))
-					fmt.Fprintf(os.Stderr, "\n")
 				}
+
 			}
 
 			ebPage++

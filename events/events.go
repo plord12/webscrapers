@@ -12,6 +12,7 @@ import (
 	"html"
 	"os"
 	"reflect"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -121,6 +122,7 @@ var eventsFound = 0
 var eventsSkippedByDescription = 0
 var eventsSkippedByNightTime = 0
 var eventsSkippedByPrice = 0
+var eventsSkippedByDate = 0
 var eventsErrors = 0
 var eventBriteIncluded = 0
 var greshamIncluded = 0
@@ -185,13 +187,13 @@ func main() {
 		if err != nil {
 			panic(fmt.Sprintf("could not parse start date %s: %v", cliOptions.StartDate, err))
 		}
-		startDate = dt.Time
+		startDate = time.Date(dt.Time.Year(), dt.Time.Month(), dt.Time.Day(), 0, 0, 0, 0, time.Local)
 
 		dt, err = dateparser.Parse(nil, cliOptions.EndDate)
 		if err != nil {
 			panic(fmt.Sprintf("could not parse end date %s: %v", cliOptions.EndDate, err))
 		}
-		endDate = dt.Time
+		endDate = time.Date(dt.Time.Year(), dt.Time.Month(), dt.Time.Day(), 23, 59, 59, 0, time.Local)
 	}
 
 	// disk cache ... perhaps this should be the same as Event ?
@@ -269,6 +271,16 @@ func main() {
 	//
 	// FIX THIS - extract common code & make more consistent
 	//
+	// Add https://www.ed.ac.uk/events/latest
+	// Add https://ras.ac.uk/events-and-meetings
+	// Add https://www.austinforum.org/events
+	// Add https://www.ieee-ukandireland.org/events/
+	// Add https://www.geolsoc.org.uk/events-and-venue-hire/public-lectures/
+	// Add https://www.newscientist.com/science-events/
+	// Add https://ougs.org/events/
+	// Add https://wi.mit.edu/events
+	// Add https://bsra.org.uk/events/2026-online-public-lecture-series/
+	//
 	eventbrite()
 	gresham()
 	rigb()
@@ -297,6 +309,7 @@ func main() {
 	fmt.Printf("	%d were skipped due to excluded categories match\n", eventsSkippedByDescription)
 	fmt.Printf("	%d were skipped due to nighttime\n", eventsSkippedByNightTime)
 	fmt.Printf("	%d were skipped due to high price\n", eventsSkippedByPrice)
+	fmt.Printf("	%d were skipped due to date range\n", eventsSkippedByDate)
 	fmt.Printf("	%d were included from eventbrite\n", eventBriteIncluded)
 	fmt.Printf("	%d were included from gresham\n", greshamIncluded)
 	fmt.Printf("	%d were included from royal institution\n", rigbIncluded)
@@ -360,6 +373,115 @@ func main() {
 		}()
 		fi.WriteString(report)
 	}
+}
+
+func classify(title string, description string, link string, eventPrice string, date time.Time, cacheEntry *Cache, force bool) bool {
+
+	var categories []string
+	skipped := false
+
+	if date.Before(startDate) || date.After(endDate) {
+		eventsSkippedByDate++
+		fmt.Fprintf(os.Stderr, "Out of date range %s (%s %s)\n", date.Local().Format("Mon 2 Jan 3:04PM"), startDate.Local().Format("Mon 2 Jan 3:04PM"), endDate.Local().Format("Mon 2 Jan 3:04PM"))
+		fmt.Fprintf(os.Stderr, "\n")
+		return true
+	}
+
+	if force {
+
+		fmt.Fprintf(os.Stderr, "Running classification\n")
+
+		// classify by description
+		//
+		start := time.Now()
+		limit := maxDescriptionWords
+		words := strings.Split(title+" "+description, " ")
+		if len(words) < limit {
+			limit = len(words)
+		}
+		batch := []string{strings.Join(words[:limit], " ")}
+		batchResult, err := classificationPipeline.RunPipeline(batch)
+		if err != nil {
+			panic(fmt.Sprintf("could not run pipeline: %v", err))
+		}
+		if len(batchResult.GetOutput()) == 1 {
+			for i := range batchResult.ClassificationOutputs[0].SortedValues {
+				if batchResult.ClassificationOutputs[0].SortedValues[i].Value > mlMinScore && i < maxCategoriesPerEvent {
+					categories = append(categories, batchResult.ClassificationOutputs[0].SortedValues[i].Key)
+				}
+			}
+		}
+
+		// if no categories, perhaps try with whole description
+		//
+		if len(categories) == 0 {
+			fmt.Fprintf(os.Stderr, "Running classification again\n")
+			batch = []string{strings.Join(words, " ")}
+			batchResult, err = classificationPipeline.RunPipeline(batch)
+			if err != nil {
+				panic(fmt.Sprintf("could not run pipeline: %v", err))
+			}
+			if len(batchResult.GetOutput()) == 1 {
+				for i := range batchResult.ClassificationOutputs[0].SortedValues {
+					if batchResult.ClassificationOutputs[0].SortedValues[i].Value > mlMinScore && i < maxCategoriesPerEvent {
+						categories = append(categories, batchResult.ClassificationOutputs[0].SortedValues[i].Key)
+					}
+				}
+			}
+		}
+
+		elapsed := time.Since(start)
+		fmt.Fprintf(os.Stderr, "Done running pipeline ... took %s\n", elapsed)
+
+		err = eventCache.Set(Cache{Title: title, Description: description, Date: date.Local().Format("Mon 2 Jan 3:04PM"), Categories: categories, Price: eventPrice}, link)
+		if err != nil {
+			panic(fmt.Sprintf("Could set cache %v", err))
+		}
+
+	} else {
+		fmt.Fprintf(os.Stderr, "Used classification from cache\n")
+
+		categories = cacheEntry.Categories
+	}
+
+	// add night time
+	//
+	if !cliOptions.Nighttime {
+		if date.Hour() < nighttimeEndHour || date.Hour() > nighttimeStartHour {
+			eventsSkippedByNightTime++
+			categories = append(categories, "Night time")
+			skipped = true
+		}
+	}
+
+	// add expensive
+	//
+	localPrice, _ := convertToGBP(eventPrice)
+	if localPrice >= cliOptions.MaxPrice {
+		eventsSkippedByPrice++
+		categories = append(categories, "Expensive")
+		skipped = true
+	}
+
+	for _, category := range categories {
+		if slices.Contains(cliOptions.Exclude, category) {
+			eventsSkippedByDescription++
+			skipped = true
+			break
+		}
+	}
+
+	if skipped {
+		allEvents = append(allEvents, Event{Sort: date.Unix(), Name: title, Date: date.Local().Format("Mon 2 Jan 3:04PM"), Link: link, Categories: categories, Include: false, Description: description, Price: eventPrice})
+		fmt.Fprintf(os.Stderr, "Event excluded %s\n", strings.Join(categories, ","))
+		fmt.Fprintf(os.Stderr, "\n")
+	} else {
+		allEvents = append(allEvents, Event{Sort: date.Unix(), Name: title, Date: date.Local().Format("Mon 2 Jan 3:04PM"), Link: link, Categories: categories, Include: true, Description: description, Price: eventPrice})
+		fmt.Fprintf(os.Stderr, "Event included %s\n", strings.Join(categories, ","))
+		fmt.Fprintf(os.Stderr, "\n")
+	}
+
+	return skipped
 }
 
 func generateList() string {
