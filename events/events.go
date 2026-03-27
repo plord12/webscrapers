@@ -132,6 +132,7 @@ var uclIncluded = 0
 var linneanIncluded = 0
 var bcsIncluded = 0
 var kipacIncluded = 0
+var edIncluded = 0
 
 // if found in the cache, must still re-classify since categories have changed
 var mustClassify = false
@@ -269,9 +270,6 @@ func main() {
 
 	// get events
 	//
-	// FIX THIS - extract common code & make more consistent
-	//
-	// Add https://www.ed.ac.uk/events/latest
 	// Add https://ras.ac.uk/events-and-meetings
 	// Add https://www.austinforum.org/events
 	// Add https://www.ieee-ukandireland.org/events/
@@ -289,6 +287,7 @@ func main() {
 	linnean()
 	bcs()
 	kipac()
+	ed()
 
 	// summary report
 	//
@@ -306,10 +305,13 @@ func main() {
 	fmt.Printf("	Machine learning model %s with %s backend\n", mlModel, mlBackend)
 	fmt.Printf("\n")
 	fmt.Printf("There were %d events found.  Of which :\n", eventsFound)
+	fmt.Printf("\n")
 	fmt.Printf("	%d were skipped due to excluded categories match\n", eventsSkippedByDescription)
 	fmt.Printf("	%d were skipped due to nighttime\n", eventsSkippedByNightTime)
 	fmt.Printf("	%d were skipped due to high price\n", eventsSkippedByPrice)
 	fmt.Printf("	%d were skipped due to date range\n", eventsSkippedByDate)
+	fmt.Printf("	%d errors\n", eventsErrors)
+	fmt.Printf("\n")
 	fmt.Printf("	%d were included from eventbrite\n", eventBriteIncluded)
 	fmt.Printf("	%d were included from gresham\n", greshamIncluded)
 	fmt.Printf("	%d were included from royal institution\n", rigbIncluded)
@@ -318,7 +320,8 @@ func main() {
 	fmt.Printf("	%d were included from linnean\n", linneanIncluded)
 	fmt.Printf("	%d were included from bcs\n", bcsIncluded)
 	fmt.Printf("	%d were included from kipac\n", kipacIncluded)
-	fmt.Printf("	%d errors\n", eventsErrors)
+	fmt.Printf("	%d were included from univerity of edinburgh\n", edIncluded)
+
 	fmt.Printf("\n")
 
 	// sort
@@ -669,7 +672,7 @@ func generateTablePress() string {
 	tablePressStruct.Options.DataTablesScrollX = false
 
 	tablePressStruct.Name = fmt.Sprintf("External events %s to %s", startDate.Local().Format("Mon 2 Jan"), endDate.Local().Format("Mon 2 Jan"))
-	tablePressStruct.Description = "This list of events has been processed from Eventbrite, Gresham College, Kavli Institute for Particle Astrophysics and Cosmology, The Linnean Society of London, The Royal Institution, University College London and University of York.  Machine learning has been used to add categories and the list was then manually curated.\n\nThe search box below can be used to search and filter for events."
+	tablePressStruct.Description = "This list of events has been processed from Eventbrite, Gresham College, Kavli Institute for Particle Astrophysics and Cosmology, The Linnean Society of London, The Royal Institution, University College London, University of York and University of Edinburgh.  Machine learning has been used to add categories and the list was then manually curated.\n\nThe search box below can be used to search and filter for events."
 
 	tablePressStruct.Data = append(tablePressStruct.Data, []string{"Row (hidden)", "Date", "Price", "Categories", "Event & Link"})
 	tablePressStruct.Visibility.Rows = append(tablePressStruct.Visibility.Rows, 1)
