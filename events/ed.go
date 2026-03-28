@@ -9,6 +9,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"time"
 
 	"github.com/markusmobius/go-dateparser"
@@ -95,8 +96,10 @@ func ed() {
 			eventsErrors++
 			continue
 		}
+		re := regexp.MustCompile(` - .*`)
+		date = re.ReplaceAllString(date, "")
 
-		dt, err := dateparser.Parse(nil, date)
+		dt, err := dateparser.Parse(defaultTime, date)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Could not parse date %s ... skipping\n", date)
 			fmt.Fprintf(os.Stderr, "\n")

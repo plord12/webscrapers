@@ -143,6 +143,9 @@ var classificationPipeline *pipelines.ZeroShotClassificationPipeline
 var startDate time.Time
 var endDate time.Time
 
+var london, _ = time.LoadLocation("Europe/London")
+var defaultTime = &dateparser.Configuration{DefaultTimezone: london}
+
 func main() {
 
 	// parse flags
@@ -184,7 +187,7 @@ func main() {
 	getExchangeRates()
 
 	if cliOptions.StartDate != "" {
-		dt, err := dateparser.Parse(nil, cliOptions.StartDate)
+		dt, err := dateparser.Parse(defaultTime, cliOptions.StartDate)
 		if err != nil {
 			panic(fmt.Sprintf("could not parse start date %s: %v", cliOptions.StartDate, err))
 		}
@@ -383,7 +386,7 @@ func classify(title string, description string, link string, eventPrice string, 
 	var categories []string
 	skipped := false
 
-	if date.Before(startDate) || date.After(endDate) {
+	if date.Local().Before(startDate) || date.Local().After(endDate) {
 		eventsSkippedByDate++
 		fmt.Fprintf(os.Stderr, "Out of date range %s (%s %s)\n", date.Local().Format("Mon 2 Jan 3:04PM"), startDate.Local().Format("Mon 2 Jan 3:04PM"), endDate.Local().Format("Mon 2 Jan 3:04PM"))
 		fmt.Fprintf(os.Stderr, "\n")
@@ -672,7 +675,7 @@ func generateTablePress() string {
 	tablePressStruct.Options.DataTablesScrollX = false
 
 	tablePressStruct.Name = fmt.Sprintf("External events %s to %s", startDate.Local().Format("Mon 2 Jan"), endDate.Local().Format("Mon 2 Jan"))
-	tablePressStruct.Description = "This list of events has been processed from Eventbrite, Gresham College, Kavli Institute for Particle Astrophysics and Cosmology, The Linnean Society of London, The Royal Institution, University College London, University of York and University of Edinburgh.  Machine learning has been used to add categories and the list was then manually curated.\n\nThe search box below can be used to search and filter for events."
+	tablePressStruct.Description = "The search box below can be used to search and filter for events."
 
 	tablePressStruct.Data = append(tablePressStruct.Data, []string{"Row (hidden)", "Date", "Price", "Categories", "Event & Link"})
 	tablePressStruct.Visibility.Rows = append(tablePressStruct.Visibility.Rows, 1)

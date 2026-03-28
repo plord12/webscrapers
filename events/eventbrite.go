@@ -34,7 +34,7 @@ func eventbrite() {
 
 			var url string
 			// https://www.eventbrite.com/d/online/free--science-and-tech--events/?page=1&start_date=2026-03-09&end_date=2026-03-23&lang=en
-			url = "https://www.eventbrite.com/d/online/" + price + "--" + cliOptions.Category + "--events/?page=" + strconv.Itoa(ebPage) + "&start_date=" + startDate.Format("2006-01-02") + "&end_date=" + endDate.Format("2006-01-02") + "&lang=en"
+			url = "https://www.eventbrite.com/d/online/" + price + "--" + cliOptions.Category + "--events/?page=" + strconv.Itoa(ebPage) + "&start_date=" + startDate.Local().Format("2006-01-02") + "&end_date=" + endDate.Local().Format("2006-01-02") + "&lang=en"
 
 			fmt.Fprintf(os.Stderr, "Fetching %s\n", url)
 			_, err := page1.Goto(url, playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
@@ -134,7 +134,7 @@ func eventbrite() {
 						", ", " ").Replace(t)
 					re := regexp.MustCompile(`\+ [0-9]* more`)
 					d = re.ReplaceAllString(d, "")
-					dt, err = dateparser.Parse(nil, d)
+					dt, err = dateparser.Parse(defaultTime, d)
 					if err != nil {
 						continue
 					}

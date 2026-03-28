@@ -119,7 +119,7 @@ func linnean() {
 
 				// parse date
 				//
-				dt, err = dateparser.Parse(nil, d)
+				dt, err = dateparser.Parse(defaultTime, d)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Could not parse date %s ... skipping\n", d)
 					fmt.Fprintf(os.Stderr, "\n")
@@ -138,7 +138,7 @@ func linnean() {
 				description = cacheEntry.Description
 				eventPrice = cacheEntry.Price
 				title = cacheEntry.Title
-				dt, _ = dateparser.Parse(nil, cacheEntry.Date)
+				dt, _ = dateparser.Parse(defaultTime, cacheEntry.Date)
 			}
 
 			if !classify(title, description, link, eventPrice, dt.Time, cacheEntry, fetched || mustClassify || cliOptions.Reclassify) {
