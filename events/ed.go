@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/markusmobius/go-dateparser"
+	"github.com/markusmobius/go-dateparser/date"
 	"github.com/playwright-community/playwright-go"
 )
 
@@ -59,57 +60,77 @@ func ed() {
 			continue
 		}
 		link = "https://www.ed.ac.uk" + link
-		cacheEntry, err := eventCache.Get(link)
 
-		title, err := event.Locator(".pincard__main__title").Locator("a").First().InnerText()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Could not find text ... skipping\n")
-			eventsErrors++
-			continue
-		}
-		fmt.Fprintf(os.Stderr, "Found '%s' at '%s'\n", title, link)
-
-		// check for duplicate
+		// see if description is already cached, if so fetch
+		// if not cached do a web query & classify
 		//
-		for _, event := range allEvents {
-			if event.Link == link {
-				fmt.Fprintf(os.Stderr, "Duplicate event ... skipping\n")
-				skipped = true
+		description := ""
+		title := ""
+		eventPrice := ""
+		fetched := false
+		var dt date.Date
+
+		cacheEntry, err := eventCache.Get(link)
+		if err != nil {
+			title, err := event.Locator(".pincard__main__title").Locator("a").First().InnerText()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Could not find text ... skipping\n")
+				eventsErrors++
 				continue
 			}
-		}
-		if skipped {
-			fmt.Fprintf(os.Stderr, "\n")
-			continue
+			fmt.Fprintf(os.Stderr, "Found '%s' at '%s'\n", title, link)
+
+			// check for duplicate
+			//
+			for _, event := range allEvents {
+				if event.Link == link {
+					fmt.Fprintf(os.Stderr, "Duplicate event ... skipping\n")
+					skipped = true
+					continue
+				}
+			}
+			if skipped {
+				fmt.Fprintf(os.Stderr, "\n")
+				continue
+			}
+
+			description, err = event.Locator(".pincard__main__preview").InnerText()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Could not find description ... skipping\n")
+				eventsErrors++
+				continue
+			}
+
+			date, err := event.Locator(".pincard__main__when").InnerText()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Could not find date ... skipping\n")
+				eventsErrors++
+				continue
+			}
+			re := regexp.MustCompile(` - .*`)
+			date = re.ReplaceAllString(date, "")
+
+			dt, err = dateparser.Parse(defaultTime, date)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Could not parse date %s ... skipping\n", date)
+				fmt.Fprintf(os.Stderr, "\n")
+				eventsErrors++
+				continue
+			}
+
+			eventPrice = "£0.00"
+			fetched = true
+
+		} else {
+			fmt.Fprintf(os.Stderr, "Used description from cache\n")
+
+			description = cacheEntry.Description
+			eventPrice = cacheEntry.Price
+			title = cacheEntry.Title
+			dt, _ = dateparser.Parse(defaultTime, cacheEntry.Date)
 		}
 
-		description, err := event.Locator(".pincard__main__preview").InnerText()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Could not find description ... skipping\n")
-			eventsErrors++
-			continue
-		}
-
-		date, err := event.Locator(".pincard__main__when").InnerText()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Could not find date ... skipping\n")
-			eventsErrors++
-			continue
-		}
-		re := regexp.MustCompile(` - .*`)
-		date = re.ReplaceAllString(date, "")
-
-		dt, err := dateparser.Parse(defaultTime, date)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Could not parse date %s ... skipping\n", date)
-			fmt.Fprintf(os.Stderr, "\n")
-			eventsErrors++
-			continue
-		}
-
-		eventPrice := "£0.00"
-
-		if !classify(title, description, link, eventPrice, dt.Time, cacheEntry, mustClassify || cliOptions.Reclassify) {
+		if !classify(title, description, link, eventPrice, dt.Time, cacheEntry, fetched || mustClassify || cliOptions.Reclassify) {
 			edIncluded++
 		}
 

@@ -348,6 +348,9 @@ func main() {
 	fmt.Printf("Attached json files can be imported into wordpress tablepress - simply dragging the file from email to\n")
 	fmt.Printf("wordpress tablepress import field should work.\n")
 	fmt.Printf("\n")
+	fmt.Printf("You can then create a wordpress page or post and add a tablepress block and choose the table.\n")
+	fmt.Printf("You could consider block configuration paramaters such as column_widths=20%%|10%%|20%%|50%% .\n")
+	fmt.Printf("\n")
 
 	fmt.Printf("Attached wordpress html files can be cut&pasted onto your page.  Switch to the `Code editor` (top right menu),\n")
 	fmt.Printf("paste then switch back to `Visual editor`.  A cut&paste to the mailpoet editor should also work.\n")
@@ -453,7 +456,7 @@ func classify(title string, description string, link string, eventPrice string, 
 	// add night time
 	//
 	if !cliOptions.Nighttime {
-		if date.Hour() < nighttimeEndHour || date.Hour() > nighttimeStartHour {
+		if date.Local().Hour() < nighttimeEndHour || date.Local().Hour() > nighttimeStartHour {
 			eventsSkippedByNightTime++
 			categories = append(categories, "Night time")
 			skipped = true
@@ -673,6 +676,7 @@ func generateTablePress() string {
 	tablePressStruct.Options.DataTablesPaginateEntries = 20
 	tablePressStruct.Options.DataTablesInfo = true
 	tablePressStruct.Options.DataTablesScrollX = false
+	tablePressStruct.Options.DataTablesCustomCommand = ""
 
 	tablePressStruct.Name = fmt.Sprintf("External events %s to %s", startDate.Local().Format("Mon 2 Jan"), endDate.Local().Format("Mon 2 Jan"))
 	tablePressStruct.Description = "The search box below can be used to search and filter for events."
