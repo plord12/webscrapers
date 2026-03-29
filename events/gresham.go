@@ -137,7 +137,7 @@ func gresham() {
 				//
 				dt, err = dateparser.Parse(defaultTime, d)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "Could not parse date ... skipping\n")
+					fmt.Fprintf(os.Stderr, "Could not parse date %s ... skipping\n", d)
 					fmt.Fprintf(os.Stderr, "\n")
 					eventsErrors++
 					continue
