@@ -60,7 +60,7 @@ func CGIHandler(rw http.ResponseWriter, req *http.Request) {
 		if email.Event != "processed" {
 			key := email.Email_id + "-" + strings.ReplaceAll(strings.ReplaceAll(email.Rcpt, "@", "-"), ".", "-")
 
-			cmd := exec.Command("/usr/bin/mosquitto_pub", "-r", "-t", "homeassistant/sensor/smtp/"+key+"/config", "-m", "{"+
+			cmd := exec.Command("/usr/bin/mosquitto_pub", "-t", "homeassistant/sensor/smtp/"+key+"/config", "-m", "{"+
 				"\"name\": \"email-mqtt-"+key+"\","+
 				"\"icon\": \"mdi:email\","+
 				"\"expire_after\": 2628000,"+
@@ -71,7 +71,7 @@ func CGIHandler(rw http.ResponseWriter, req *http.Request) {
 				fmt.Fprintf(logf, "Exec %v %s\n", cmderr, out)
 			}
 
-			cmd = exec.Command("/usr/bin/mosquitto_pub", "-r", "-t", "homeassistant/sensor/smtp/"+key+"/state", "-m", email.Event)
+			cmd = exec.Command("/usr/bin/mosquitto_pub", "-t", "homeassistant/sensor/smtp/"+key+"/state", "-m", email.Event)
 			out, cmderr = cmd.CombinedOutput()
 			if cmderr != nil {
 				fmt.Fprintf(logf, "Exec %v %s\n", cmderr, out)
@@ -80,7 +80,7 @@ func CGIHandler(rw http.ResponseWriter, req *http.Request) {
 			var re = regexp.MustCompile("^{")
 			s := re.ReplaceAllString(string(body), "{\"topic\":\""+"homeassistant/sensor/smtp/"+key+"\",")
 
-			cmd = exec.Command("/usr/bin/mosquitto_pub", "-r", "-t", "homeassistant/sensor/smtp/"+key+"/attributes", "-m", s)
+			cmd = exec.Command("/usr/bin/mosquitto_pub", "-t", "homeassistant/sensor/smtp/"+key+"/attributes", "-m", s)
 			out, cmderr = cmd.CombinedOutput()
 			if cmderr != nil {
 				fmt.Fprintf(logf, "Exec %v %s\n", cmderr, out)
