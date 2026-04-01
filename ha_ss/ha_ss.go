@@ -101,16 +101,20 @@ func screenshot(headless bool, username string, password string, url string, css
 	// main page & login
 	//
 	log.Printf("Starting chromium at %s\n", url)
-	_, err = page.Goto(url, playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
+	_, err = page.Goto(url, playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateNetworkidle})
 	if err != nil {
 		return fmt.Errorf("could not goto url: %v", err)
 	}
 	log.Printf("Logging in\n")
-	err = page.Locator("[name=username]").First().Fill(username)
+	inputs, err := page.Locator("input").All()
+	if err != nil {
+		return fmt.Errorf("could not get inputs: %v", err)
+	}
+	err = inputs[0].Fill(username)
 	if err != nil {
 		return fmt.Errorf("could not get username: %v", err)
 	}
-	err = page.Locator("[name=password]").First().Fill(password)
+	err = inputs[1].Fill(password)
 	if err != nil {
 		return fmt.Errorf("could not get password: %v", err)
 	}
