@@ -48,6 +48,8 @@ EVENTS_SOURCE+=${EVENTS_NAME}/linnean.go
 EVENTS_SOURCE+=${EVENTS_NAME}/bcs.go 
 EVENTS_SOURCE+=${EVENTS_NAME}/kipac.go
 EVENTS_SOURCE+=${EVENTS_NAME}/ed.go
+KINDLEUNLIMITED_NAME=kindleunlimited
+KINDLEUNLIMITED_SOURCE=${KINDLEUNLIMITED_NAME}/${KINDLEUNLIMITED_NAME}.go
 
 # local local builds/tests
 #
@@ -68,6 +70,7 @@ BINARIES+=${BINDIR}/${OTPCGI_NAME}
 BINARIES+=${BINDIR}/${SMTP2GOCGI_NAME} 
 #BINARIES+=${BINDIR}/${FACEBOOK_NAME}
 BINARIES+=${BINDIR}/${EVENTS_NAME} 
+BINARIES+=${BINDIR}/${KINDLEUNLIMITED_NAME} 
 
 LINUXARM64BINDIR=bin-linux-arm64
 LINUXAMD64BINDIR=bin-linux-amd64
@@ -86,7 +89,7 @@ otp:
 	mkdir -p otp
 
 update:
-	go get -u ./...
+	go get -u ./${HA_SS_NAME} ./${AVIVA_NAME} ./${AVIVAMYWORKPLACE_NAME} ./${NUTMEG_NAME} ./${FUND_NAME} ./${MONEYFARM_NAME} ./${MONEYHUB_NAME} ./${OCTOPUSWHEEL_NAME} ./${OCTOPUSREWARDS_NAME} ./${MYCAUSEUK_NAME} ./${OTPCGI_NAME} ./${SMTP2GOCGI_NAME} ./${EVENTS_NAME}
 	go mod tidy
 
 release: release-ha_ss_addon release-launch-linux-arm64 release-launch-linux-amd64 release-launch-darwin-arm64 release-launch-windows-amd64 release-webscrapers-linux-arm64 release-webscrapers-linux-amd64 release-webscrapers-darwin-arm64 release-webscrapers-windows-amd64
@@ -336,6 +339,19 @@ ${DARWINARM64BINDIR}/${EVENTS_NAME}: ${EVENTS_SOURCE} ${UTILS_SOURCE}
 ${WINDOWSAMD64BINDIR}/${EVENTS_NAME}.exe: ${EVENTS_SOURCE} ${UTILS_SOURCE}
 	GOARCH=amd64 GOOS=windows go build -o $@ $<
 
+# kindleunlimited
+#
+${BINDIR}/${KINDLEUNLIMITED_NAME}: ${KINDLEUNLIMITED_SOURCE}
+	go build -o $@ $<
+${LINUXARM64BINDIR}/${KINDLEUNLIMITED_NAME}: ${KINDLEUNLIMITED_SOURCE}
+	GOARCH=arm64 GOOS=linux go build -o $@ $<
+${LINUXAMD64BINDIR}/${KINDLEUNLIMITED_NAME}: ${KINDLEUNLIMITED_SOURCE}
+	GOARCH=amd64 GOOS=linux go build -o $@ $<
+${DARWINARM64BINDIR}/${KINDLEUNLIMITED_NAME}: ${KINDLEUNLIMITED_SOURCE}
+	GOARCH=arm64 GOOS=darwin go build -o $@ $<
+${WINDOWSAMD64BINDIR}/${KINDLEUNLIMITED_NAME}.exe: ${KINDLEUNLIMITED_SOURCE}
+	GOARCH=amd64 GOOS=windows go build -o $@ $<
+
 test: testha testaviva testavivamyworkplace testnutmeg testfund testmoneyfarm  testu3agroups
 
 testha: ${BINDIR}/${HA_SS_NAME}
@@ -433,6 +449,11 @@ testevents: ${BINDIR}/${EVENTS_NAME}
 		--exclude KS1 --exclude KS2 --exclude KS3 --exclude KS4 --exclude KS5 --exclude STEM --exclude "A Level" \
 		--exclude Kindergarten --exclude Classroom --exclude Alumni --exclude Trade --exclude Apprentiship --exclude Reskill --exclude Upskill --exclude Membership \
 		--exclude Statistics  --exclude Economics --exclude Accounting --exclude Finance --exclude "Business administration" --exclude "Urban planning"
+
+testkindleunlimited: ${BINDIR}/${KINDLEUNLIMITED_NAME}
+	${BINDIR}/${KINDLEUNLIMITED_NAME} --help
+	${BINDIR}/${KINDLEUNLIMITED_NAME} --username "$(KINDLEUNLIMITED_USERNAME)" --password "$(KINDLEUNLIMITED_PASSWORD)" --otpcleancommand "$(KINDLEUNLIMITED_OTPCLEANCOMMAND)"  --otpcommand "$(KINDLEUNLIMITED_OTPCOMMAND)"
+
 
 clean:
 	@go clean
