@@ -104,9 +104,9 @@ func main() {
 	// click through
 	// <a class="a-button a-button--tertiary a-button--tertiary-shallow dd-data-link" data-qa-navbutton="viewArrangement" data-dd-group="myavivaHomePage-workplace" data-dd-loc="employer_card" data-dd-link="TheUniversityofReading_homepage" href="/Workplace/Transfer/A5013"><span class="a-button__inner">View <span class="a-button__inner" data-di-mask="">The University of Reading</span></span></a>
 	err = page.GetByText("View", playwright.PageGetByTextOptions{Exact: playwright.Bool(false)}).Click()
-	if err != nil {
-		panic(fmt.Sprintf("could not click: %v", err))
-	}
+	//if err != nil {
+	//	panic(fmt.Sprintf("could not click: %v", err))
+	//}
 
 	// get balance
 	//
