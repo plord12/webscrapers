@@ -32,7 +32,7 @@ import (
 const camoufoxVer = "135.0.1-beta.24"
 const launchVer = "v0.0.1-alpha"
 
-const userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:135.0) Gecko/20100101 Firefox/135.0"
+const userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:150.0) Gecko/20100101 Firefox/150.0"
 
 // Finish webscraping - check for errors and save video if needed
 func Finish(page playwright.Page) {
