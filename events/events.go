@@ -167,15 +167,15 @@ func main() {
 		perftests("ORT", "", 80, mlModel, mlModelFile)
 
 		// mac 12.6s, arm6 1m6s
-		//perftests("XLA", "", maxDescriptionWords)
+		//perftests("XLA", "", maxDescriptionWords, mlModel, mlModelFile)
 		// mac 10.7s, arm6 23.9s
-		//perftests("ORT", "XNNPACK", maxDescriptionWords)
+		//perftests("ORT", "XNNPACK", maxDescriptionWords, mlModel, mlModelFile)
 		// crashes
-		// perftests("ORT", "CoreML", 20, mlModel, mlModelFile)
+		//perftests("ORT", "CoreML", 20, mlModel, mlModelFile)
 		// doesn't work
-		//perftests("ORT", "ACL")
+		//perftests("ORT", "ACL", 20, mlModel, mlModelFile)
 		// never ends
-		// perftests("", "", maxDescriptionWords, mlModel, mlModelFile)
+		//perftests("", "", maxDescriptionWords, mlModel, mlModelFile)
 		os.Exit(0)
 	}
 
@@ -281,7 +281,9 @@ func main() {
 	// Add https://ougs.org/events/
 	// Add https://wi.mit.edu/events
 	// Add https://bsra.org.uk/events/2026-online-public-lecture-series/
-	//
+	// Add https://msas.org.uk/
+	// Add https://events.ox.ac.uk/
+
 	eventbrite()
 	gresham()
 	rigb()

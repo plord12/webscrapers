@@ -28,7 +28,7 @@ var currencyARS, _ = regexp.Compile(".?ARS.?([0-9.]*)[^0-9]*")
 
 type Rate struct {
 	Code string
-	Rate float64
+	Rate string
 }
 
 var rates map[string]Rate
@@ -44,15 +44,15 @@ func getExchangeRates() {
 	}
 	res, getErr := httpClient.Do(req)
 	if getErr != nil {
-		fmt.Fprintf(os.Stderr, "could not get exchange rates from floatrates: %v", err)
+		fmt.Fprintf(os.Stderr, "could not get exchange rates from floatrates: %v", getErr)
 	}
 	body, readErr := io.ReadAll(res.Body)
 	if readErr != nil {
-		fmt.Fprintf(os.Stderr, "could not read exchange rates from floatrates: %v", err)
+		fmt.Fprintf(os.Stderr, "could not read exchange rates from floatrates: %v", readErr)
 	}
 	jsonErr := json.Unmarshal(body, &rates)
 	if jsonErr != nil {
-		fmt.Fprintf(os.Stderr, "could not process exchange rates json: %v", err)
+		fmt.Fprintf(os.Stderr, "could not process exchange rates json: %v", jsonErr)
 	}
 }
 
@@ -70,7 +70,11 @@ func convertToGBP(currencyString string) (float64, error) {
 	if len(cad) > 0 {
 		converted, err := strconv.ParseFloat(cad[1], 32)
 		if err == nil {
-			return converted / rates["cad"].Rate, nil
+			value, err := strconv.ParseFloat(rates["cad"].Rate, 32)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "could not process cad %s: %v", rates["cad"].Rate, err)
+			}
+			return converted / value, nil
 		}
 		return converted, err
 	}
@@ -78,7 +82,11 @@ func convertToGBP(currencyString string) (float64, error) {
 	if len(usd) > 0 {
 		converted, err := strconv.ParseFloat(usd[1], 32)
 		if err == nil {
-			return converted / rates["usd"].Rate, nil
+			value, err := strconv.ParseFloat(rates["usd"].Rate, 32)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "could not process usd %s: %v", rates["usd"].Rate, err)
+			}
+			return converted / value, nil
 		}
 		return converted, err
 	}
@@ -86,7 +94,11 @@ func convertToGBP(currencyString string) (float64, error) {
 	if len(aud) > 0 {
 		converted, err := strconv.ParseFloat(aud[1], 32)
 		if err == nil {
-			return converted / rates["aud"].Rate, nil
+			value, err := strconv.ParseFloat(rates["aud"].Rate, 32)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "could not process aud %s: %v", rates["aud"].Rate, err)
+			}
+			return converted / value, nil
 		}
 		return converted, err
 	}
@@ -94,7 +106,11 @@ func convertToGBP(currencyString string) (float64, error) {
 	if len(eur) > 0 {
 		converted, err := strconv.ParseFloat(eur[1], 32)
 		if err == nil {
-			return converted / rates["eur"].Rate, nil
+			value, err := strconv.ParseFloat(rates["eur"].Rate, 32)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "could not process eur %s: %v", rates["eur"].Rate, err)
+			}
+			return converted / value, nil
 		}
 		return converted, err
 	}
@@ -102,7 +118,11 @@ func convertToGBP(currencyString string) (float64, error) {
 	if len(sgd) > 0 {
 		converted, err := strconv.ParseFloat(sgd[1], 32)
 		if err == nil {
-			return converted / rates["sgd"].Rate, nil
+			value, err := strconv.ParseFloat(rates["sgd"].Rate, 32)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "could not process sgd %s: %v", rates["sgd"].Rate, err)
+			}
+			return converted / value, nil
 		}
 		return converted, err
 	}
@@ -110,7 +130,11 @@ func convertToGBP(currencyString string) (float64, error) {
 	if len(ars) > 0 {
 		converted, err := strconv.ParseFloat(ars[1], 32)
 		if err == nil {
-			return converted / rates["ars"].Rate, nil
+			value, err := strconv.ParseFloat(rates["ars"].Rate, 32)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "could not process ars %s: %v", rates["ars"].Rate, err)
+			}
+			return converted / value, nil
 		}
 		return converted, err
 	}

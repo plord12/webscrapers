@@ -110,7 +110,7 @@ func york() {
 				fmt.Fprintf(os.Stderr, "Done fetch page ... took %s\n", elapsed)
 
 				keypoints, err := page2.Locator(".uoy_key_point_text").All()
-				if err != nil || len(keypoints) < 3 {
+				if err != nil || len(keypoints) <= 3 {
 					fmt.Fprintf(os.Stderr, "Could not find date ... skipping\n")
 					fmt.Fprintf(os.Stderr, "\n")
 					eventsErrors++
