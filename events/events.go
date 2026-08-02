@@ -184,7 +184,12 @@ func main() {
 		os.Exit(0)
 	}
 
-	getExchangeRates()
+	if getExchangeRates() != nil {
+		time.Sleep(time.Second)
+		if getExchangeRates() != nil {
+			panic(fmt.Sprintf("could not get exchange rates %v", err))
+		}
+	}
 
 	if cliOptions.StartDate != "" {
 		dt, err := dateparser.Parse(defaultTime, cliOptions.StartDate)

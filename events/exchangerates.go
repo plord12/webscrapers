@@ -33,27 +33,31 @@ type Rate struct {
 
 var rates map[string]Rate
 
-func getExchangeRates() {
+func getExchangeRates() error {
 	// should cache this
 	httpClient := http.Client{}
 
 	req, err := http.NewRequest(http.MethodGet, "https://www.floatrates.com/daily/gbp.json", nil)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "could not create http session: %v", err)
-
+		fmt.Fprintf(os.Stderr, "could not create http session for floatrates: %v", err)
+		return err
 	}
 	res, getErr := httpClient.Do(req)
 	if getErr != nil {
 		fmt.Fprintf(os.Stderr, "could not get exchange rates from floatrates: %v", getErr)
+		return err
 	}
 	body, readErr := io.ReadAll(res.Body)
 	if readErr != nil {
 		fmt.Fprintf(os.Stderr, "could not read exchange rates from floatrates: %v", readErr)
+		return err
 	}
 	jsonErr := json.Unmarshal(body, &rates)
 	if jsonErr != nil {
 		fmt.Fprintf(os.Stderr, "could not process exchange rates json: %v", jsonErr)
+		return err
 	}
+	return nil
 }
 
 func convertToGBP(currencyString string) (float64, error) {
