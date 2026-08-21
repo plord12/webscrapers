@@ -13,6 +13,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/jessevdk/go-flags"
 	"github.com/playwright-community/playwright-go"
@@ -84,9 +85,10 @@ func main() {
 			page.Locator("#captcha").Fill(captcha)
 		}
 	}
-	page.SetDefaultTimeout(30000.0)
+	//page.SetDefaultTimeout(30000.0)
 	// <button type="submit" name="action" value="default" class="c0a486a03 c3a925026 cc4e2760d cf0fbb154 c4b20090f" data-action-button-primary="true">Sign in</button>
-	err = page.GetByRole("button", playwright.PageGetByRoleOptions{Name: "Sign in"}).Click()
+	//err = page.GetByRole("button", playwright.PageGetByRoleOptions{Name: "Sign in"}).Click()
+	err = page.Keyboard().Press("Enter")
 	if err != nil {
 		panic(fmt.Sprintf("could not click: %v", err))
 	}
@@ -116,6 +118,12 @@ func main() {
 	} else {
 		panic(fmt.Sprintf("could not get one time password message: %v", err))
 	}
+
+	time.Sleep(5 * time.Second)
+	// <a href="/" class="_nk-link_1kr9w_1 _nk-link--button_1kr9w_52 _nk-link--button--secondary_1kr9w_129" data-qa="kyc-review-intercept__back-button">Remind me later</a>
+	page.Goto("https://app.personalinvesting.jpmorgan.com/", playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateDomcontentloaded})
+	//page.GetByText("Remind me later", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click()
+	time.Sleep(5 * time.Second)
 
 	// get balance
 	//
