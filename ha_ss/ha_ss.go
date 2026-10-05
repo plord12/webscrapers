@@ -129,11 +129,11 @@ func screenshot(headless bool, username string, password string, url string, css
 
 		// wait for page to finish
 		//
-		page.Locator(css)
+		page.Locator(css).First()
 		page.WaitForURL(url, playwright.PageWaitForURLOptions{WaitUntil: playwright.WaitUntilStateNetworkidle})
 
 		log.Printf("Attempting screenshot %s\n", css)
-		screenshot, err := page.Locator(css).Screenshot(playwright.LocatorScreenshotOptions{Path: playwright.String(filename)})
+		screenshot, err := page.Locator(css).First().Screenshot(playwright.LocatorScreenshotOptions{Path: playwright.String(filename)})
 		if err != nil {
 			return fmt.Errorf("could not get screenshot: %v", err)
 		}
