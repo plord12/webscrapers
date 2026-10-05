@@ -6,7 +6,7 @@ require (
 	github.com/artdarek/go-unzip v1.0.0
 	github.com/cavaliergopher/grab/v3 v3.0.1
 	github.com/jonfriesen/playwright-go-stealth v0.0.3
-	github.com/playwright-community/playwright-go v0.4802.0
+	github.com/mxschmitt/playwright-go v0.4802.0
 )
 
 require (

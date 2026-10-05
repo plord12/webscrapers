@@ -7,6 +7,7 @@ perf tests
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"runtime"
@@ -23,21 +24,22 @@ import (
 func perftests(backend string, executionProvidor string, length int, model string, modelFile string) {
 
 	var session *hugot.Session
+	ctx := context.Background()
 	var err error
 
 	switch backend {
 	case "XLA":
-		session, err = hugot.NewXLASession()
+		session, err = hugot.NewXLASession(ctx)
 	case "ORT":
 		if executionProvidor == "CoreML" {
 
 			// https://onnxruntime.ai/docs/execution-providers/CoreML-ExecutionProvider.html
-			session, err = hugot.NewORTSession(options.WithCoreML(map[string]string{"ModelFormat": "MLProgram", "MLComputeUnits": "ALL", "RequireStaticInputShapes": "0", "EnableOnSubgraphs": "0"}))
+			session, err = hugot.NewORTSession(ctx, options.WithCoreML(map[string]string{"ModelFormat": "MLProgram", "MLComputeUnits": "ALL", "RequireStaticInputShapes": "0", "EnableOnSubgraphs": "0"}))
 
 		} else if executionProvidor == "XNNPACK" {
 
 			// https://onnxruntime.ai/docs/execution-providers/Xnnpack-ExecutionProvider.html
-			session, err = hugot.NewORTSession(options.WithOnnxLibraryPath("onnx/onnxruntime/build/MacOS/RelWithDebInfo"),
+			session, err = hugot.NewORTSession(ctx, options.WithOnnxLibraryPath("onnx/onnxruntime/build/MacOS/RelWithDebInfo"),
 				options.WithInterOpNumThreads(1),
 				options.WithInterOpSpinning(false),
 				options.WithExtraExecutionProvider("XNNPACK", map[string]string{"intra_op_num_threads": strconv.Itoa(runtime.NumCPU())}))
@@ -46,19 +48,19 @@ func perftests(backend string, executionProvidor string, length int, model strin
 
 			// https://onnxruntime.ai/docs/execution-providers/community-maintained/ACL-ExecutionProvider.html
 
-			session, err = hugot.NewORTSession(options.WithOnnxLibraryPath("onnx/onnxruntime/build/MacOS/RelWithDebInfo"),
+			session, err = hugot.NewORTSession(ctx, options.WithOnnxLibraryPath("onnx/onnxruntime/build/MacOS/RelWithDebInfo"),
 				options.WithExtraExecutionProvider("ACL", map[string]string{}))
 		} else {
 
 			//session, err = hugot.NewORTSession(options.WithOnnxLibraryPath("onnx/onnxruntime/build/MacOS/RelWithDebInfo"))
-			session, err = hugot.NewORTSession()
+			session, err = hugot.NewORTSession(ctx)
 
 		}
 		// RKNPU on linux ? https://onnxruntime.ai/docs/execution-providers/community-maintained/RKNPU-ExecutionProvider.html
 
 	default:
 		// tends to hang
-		session, err = hugot.NewGoSession()
+		session, err = hugot.NewGoSession(ctx)
 	}
 	if err != nil {
 		panic(fmt.Sprintf("Could not start hugot: %v", err))
@@ -66,7 +68,7 @@ func perftests(backend string, executionProvidor string, length int, model strin
 
 	downloadOptions := hugot.NewDownloadOptions()
 	downloadOptions.OnnxFilePath = modelFile
-	modelPath, err := hugot.DownloadModel(model, "./models/", downloadOptions)
+	modelPath, err := hugot.DownloadModel(ctx, model, "./models/", downloadOptions)
 	if err != nil {
 		panic(fmt.Sprintf("could not download model: %v", err))
 	}
@@ -102,7 +104,7 @@ func perftests(backend string, executionProvidor string, length int, model strin
 	//fmt.Fprintf(os.Stderr, "%s\n", strings.Join(words[:limit], " "))
 
 	start := time.Now()
-	batchResult, err := classificationPipeline.RunPipeline(batch)
+	batchResult, err := classificationPipeline.RunPipeline(ctx, batch)
 	elapsed := time.Since(start)
 	if err != nil {
 		panic(fmt.Sprintf("could not run pipeline: %v", err))

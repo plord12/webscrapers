@@ -15,7 +15,7 @@ import (
 
 	"github.com/markusmobius/go-dateparser"
 	"github.com/markusmobius/go-dateparser/date"
-	"github.com/playwright-community/playwright-go"
+	"github.com/mxschmitt/playwright-go"
 )
 
 func ucl() {

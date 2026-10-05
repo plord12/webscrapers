@@ -7,6 +7,7 @@ find eventbrite events, output in wordpress format
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"html"
@@ -25,7 +26,7 @@ import (
 	"github.com/knights-analytics/hugot/pipelines"
 	"github.com/lucasb-eyer/go-colorful"
 	"github.com/markusmobius/go-dateparser"
-	"github.com/playwright-community/playwright-go"
+	"github.com/mxschmitt/playwright-go"
 	"github.com/plord12/webscrapers/utils"
 )
 
@@ -146,6 +147,8 @@ var endDate time.Time
 var london, _ = time.LoadLocation("Europe/London")
 var defaultTime = &dateparser.Configuration{DefaultTimezone: london}
 
+var ctx = context.Background()
+
 func main() {
 
 	// parse flags
@@ -156,15 +159,18 @@ func main() {
 	}
 
 	if cliOptions.Perftest {
+
 		perftests("ORT", "", 20, "KnightsAnalytics/deberta-v3-base-zeroshot-v1", "model.onnx")
 		perftests("ORT", "", 40, "KnightsAnalytics/deberta-v3-base-zeroshot-v1", "model.onnx")
 		perftests("ORT", "", 60, "KnightsAnalytics/deberta-v3-base-zeroshot-v1", "model.onnx")
 		perftests("ORT", "", 80, "KnightsAnalytics/deberta-v3-base-zeroshot-v1", "model.onnx")
+		perftests("", "", 80, "KnightsAnalytics/deberta-v3-base-zeroshot-v1", "model.onnx")
+
 		// mac 2.9s arm6 10.7s
-		perftests("ORT", "", 20, mlModel, mlModelFile)
-		perftests("ORT", "", 40, mlModel, mlModelFile)
-		perftests("ORT", "", 60, mlModel, mlModelFile)
-		perftests("ORT", "", 80, mlModel, mlModelFile)
+		//perftests("ORT", "", 20, mlModel, mlModelFile)
+		//perftests("ORT", "", 40, mlModel, mlModelFile)
+		//perftests("ORT", "", 60, mlModel, mlModelFile)
+		//perftests("ORT", "", 80, mlModel, mlModelFile)
 
 		// mac 12.6s, arm6 1m6s
 		//perftests("XLA", "", maxDescriptionWords, mlModel, mlModelFile)
@@ -174,7 +180,7 @@ func main() {
 		//perftests("ORT", "CoreML", 20, mlModel, mlModelFile)
 		// doesn't work
 		//perftests("ORT", "ACL", 20, mlModel, mlModelFile)
-		// never ends
+		// slow
 		//perftests("", "", maxDescriptionWords, mlModel, mlModelFile)
 		os.Exit(0)
 	}
@@ -225,13 +231,14 @@ func main() {
 	// machine learning classification
 	//
 	var session *hugot.Session
+
 	switch mlBackend {
 	case "XLA":
-		session, err = hugot.NewXLASession()
+		session, err = hugot.NewXLASession(ctx)
 	case "ORT":
-		session, err = hugot.NewORTSession()
+		session, err = hugot.NewORTSession(ctx)
 	default:
-		session, err = hugot.NewGoSession()
+		session, err = hugot.NewGoSession(ctx)
 	}
 	if err != nil {
 		panic(fmt.Sprintf("Could not start hugot: %v", err))
@@ -244,7 +251,7 @@ func main() {
 	}(session)
 	downloadOptions := hugot.NewDownloadOptions()
 	downloadOptions.OnnxFilePath = mlModelFile
-	modelPath, err := hugot.DownloadModel(mlModel, "./models/", downloadOptions)
+	modelPath, err := hugot.DownloadModel(ctx, mlModel, "./models/", downloadOptions)
 	if err != nil {
 		panic(fmt.Sprintf("could not download model: %v", err))
 	}
@@ -416,7 +423,7 @@ func classify(title string, description string, link string, eventPrice string, 
 			limit = len(words)
 		}
 		batch := []string{strings.Join(words[:limit], " ")}
-		batchResult, err := classificationPipeline.RunPipeline(batch)
+		batchResult, err := classificationPipeline.RunPipeline(ctx, batch)
 		if err != nil {
 			panic(fmt.Sprintf("could not run pipeline: %v", err))
 		}
@@ -433,7 +440,7 @@ func classify(title string, description string, link string, eventPrice string, 
 		if len(categories) == 0 {
 			fmt.Fprintf(os.Stderr, "Running classification again\n")
 			batch = []string{strings.Join(words, " ")}
-			batchResult, err = classificationPipeline.RunPipeline(batch)
+			batchResult, err = classificationPipeline.RunPipeline(ctx, batch)
 			if err != nil {
 				panic(fmt.Sprintf("could not run pipeline: %v", err))
 			}

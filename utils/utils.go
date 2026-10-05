@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"os/exec"
 	"path"
@@ -20,19 +21,23 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/artdarek/go-unzip"
 	"github.com/cavaliergopher/grab/v3"
-	stealth "github.com/jonfriesen/playwright-go-stealth"
-	"github.com/playwright-community/playwright-go"
+	"github.com/mxschmitt/playwright-go"
 )
 
 // const camoufoxVer = "132.0.2-beta.17"
-const camoufoxVer = "135.0.1-beta.24"
+// const camoufoxVer = "135.0.1-beta.24"
+// const camoufoxVer = "152.0.4-beta.29"
+const camoufoxVer = "156.0.1-beta.34"
 const launchVer = "v0.0.1-alpha"
 
 const userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:150.0) Gecko/20100101 Firefox/150.0"
+
+var camoufoxPid int
 
 // Finish webscraping - check for errors and save video if needed
 func Finish(page playwright.Page) {
@@ -53,6 +58,9 @@ func Finish(page playwright.Page) {
 		page.Video().Delete()
 	}
 
+	if camoufoxPid > 0 {
+		syscall.Kill(camoufoxPid, syscall.SIGKILL)
+	}
 }
 
 // return the directory where browsers are installed
@@ -84,7 +92,7 @@ func registryDirectory() string {
 }
 
 // install Camoufox if not already installed
-func installCamoufox() {
+func installCamoufoxOld() {
 
 	browserDirectory := path.Join(registryDirectory(), "camoufox-"+camoufoxVer)
 
@@ -140,8 +148,92 @@ func installCamoufox() {
 	}
 }
 
-// Start webscraping with Camoufo
+// ALTERNATE WAY
+
+// see github.com/mxschmitt/playwright-go/issues/512#issuecomment-2526211418
+// https://camoufox.com/python/remote-server/
+// pip install -U camoufox --break-system-packages
+// camoufox set official/stable/152.0.4-beta.29
+// camoufox fetch
+// camoufox server
+// or
+// python -c "from camoufox.server import launch_server;launch_server(headless=True,ws_path='/',port=8000)"
+// pw.Firefox.Connect("ws://localhost:8000/")
+
+func installCamoufox() {
+	cmd := exec.Command("pip", "install", "-U", "camoufox", "--break-system-packages")
+	err := cmd.Run()
+	if err != nil {
+		panic(fmt.Sprintf("could not install camoufox: %v", err))
+	}
+
+	cmd = exec.Command("camoufox", "set", "official/stable/"+camoufoxVer)
+	err = cmd.Run()
+	if err != nil {
+		panic(fmt.Sprintf("could not set camoufox version: %v", err))
+	}
+
+	cmd = exec.Command("camoufox", "fetch")
+	err = cmd.Run()
+	if err != nil {
+		panic(fmt.Sprintf("could not fetch camoufox: %v", err))
+	}
+
+}
+
 func StartCamoufox(headless bool) playwright.Page {
+
+	installCamoufox()
+
+	headlessString := "False"
+	if headless {
+		headlessString = "True"
+	}
+	cmd := exec.Command("python", "-c", "from camoufox.server import launch_server;launch_server(headless="+headlessString+",ws_path='/',port=8000)")
+	cmd.Stdout = os.Stderr
+	cmd.Stderr = os.Stderr
+	err := cmd.Start()
+	if err != nil {
+		panic(fmt.Sprintf("could not start camoufox: %v", err))
+	}
+
+	err = playwright.Install(&playwright.RunOptions{SkipInstallBrowsers: true})
+	if err != nil {
+		panic(fmt.Sprintf("could not install playwright: %v", err))
+	}
+	pw, err := playwright.Run()
+	if err != nil {
+		panic(fmt.Sprintf("could not launch playwright: %v", err))
+	}
+
+	// wait until can connect
+	for i := 0; i < 20; i++ {
+		ln, err := net.Dial("tcp", "localhost:8000")
+		if err == nil {
+			ln.Close()
+			break
+		}
+		time.Sleep(time.Second)
+	}
+
+	camoufoxPid = cmd.Process.Pid
+
+	browser, err := pw.Firefox.Connect("ws://localhost:8000/")
+	if err != nil {
+		panic(fmt.Sprintf("could not connect to Camoufox: %v", err))
+	}
+	page, err := browser.NewPage(playwright.BrowserNewPageOptions{UserAgent: playwright.String(userAgent)})
+	if err != nil {
+		panic(fmt.Sprintf("could not create page: %v", err))
+	}
+
+	return page
+}
+
+// Start webscraping with Camoufo
+//
+
+func StartCamoufoxOld(headless bool) playwright.Page {
 
 	installCamoufox()
 
@@ -153,11 +245,12 @@ func StartCamoufox(headless bool) playwright.Page {
 	if err != nil {
 		panic(fmt.Sprintf("could not launch playwright: %v", err))
 	}
+
 	browser, err := pw.Firefox.Launch(playwright.BrowserTypeLaunchOptions{Headless: playwright.Bool(headless), ExecutablePath: playwright.String(path.Join(registryDirectory(), "camoufox-"+camoufoxVer, "launch"))})
 	if err != nil {
 		panic(fmt.Sprintf("could not launch Camoufox: %v", err))
 	}
-	page, err := browser.NewPage(playwright.BrowserNewPageOptions{UserAgent: playwright.String(userAgent)}, playwright.BrowserNewPageOptions{RecordVideo: &playwright.RecordVideo{Dir: "videos/"}})
+	page, err := browser.NewPage(playwright.BrowserNewPageOptions{UserAgent: playwright.String(userAgent)})
 	if err != nil {
 		panic(fmt.Sprintf("could not create page: %v", err))
 	}
@@ -188,10 +281,12 @@ func StartChromium(headless bool) playwright.Page {
 
 	// Inject stealth script
 	//
-	err = stealth.InjectWithOptions(page, stealth.Options{ChromeStealth: true})
-	if err != nil {
-		panic(fmt.Sprintf("could not inject stealth script: %v", err))
-	}
+	/*
+		err = stealth.InjectWithOptions(page, stealth.Options{ChromeStealth: true})
+		if err != nil {
+			panic(fmt.Sprintf("could not inject stealth script: %v", err))
+		}
+	*/
 
 	return page
 }

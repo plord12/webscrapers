@@ -14,7 +14,7 @@ import (
 	"regexp"
 
 	"github.com/jessevdk/go-flags"
-	"github.com/playwright-community/playwright-go"
+	"github.com/mxschmitt/playwright-go"
 	"github.com/plord12/webscrapers/utils"
 )
 

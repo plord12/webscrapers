@@ -16,7 +16,7 @@ import (
 	"github.com/jessevdk/go-flags"
 	"github.com/plord12/webscrapers/utils"
 
-	"github.com/playwright-community/playwright-go"
+	"github.com/mxschmitt/playwright-go"
 )
 
 type Options struct {
