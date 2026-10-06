@@ -358,7 +358,7 @@ testha: ${BINDIR}/${HA_SS_NAME}
 	${BINDIR}/${HA_SS_NAME} --help
 	${BINDIR}/${HA_SS_NAME} --username "$(HA_USERNAME)" --password "$(HA_PASSWORD)" --url "$(TEST1_HA_URL)" --css "$(TEST1_HA_CSS)" --path test1.png
 	#${BINDIR}/${HA_SS_NAME} --username "$(HA_USERNAME)" --password "$(HA_PASSWORD)" --url "$(TEST2_HA_URL)" --css "$(TEST2_HA_CSS)" --path test2.png
-	#${BINDIR}/${HA_SS_NAME} --username "$(HA_USERNAME)" --password "$(HA_PASSWORD)" --url "$(TEST3_HA_URL)" --css "$(TEST3_HA_CSS)" --path test3.png
+	${BINDIR}/${HA_SS_NAME} --username "$(HA_USERNAME)" --password "$(HA_PASSWORD)" --url "$(TEST3_HA_URL)" --css "$(TEST3_HA_CSS)" --path test3.png
 
 testrest:
 	${BINDIR}/${HA_SS_NAME} --username "$(HA_USERNAME)" --password "$(HA_PASSWORD)" --restport 3500

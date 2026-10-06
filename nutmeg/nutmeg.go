@@ -128,7 +128,7 @@ func main() {
 	// get balance
 	//
 	// <span class="_nk-text_1a26s_12 nk-text _nk-amount_16djj_1 _nk-amount--theme-dark_16djj_49 _nk-amount--positive_16djj_10 _nk-amount--no-line-height_16djj_25 _nk-text--style-text-1_1a26s_60 _nk-text--fw-medium_1a26s_133 _nk-text--color-dark_1a26s_160 _nk-text--theme-dark--color-default_1a26s_356 _nk-text--theme-dark--color-dark_1a26s_362 _nk-text--tag-span_1a26s_103 _nk-text--size-xxl_1a26s_106" aria-label="£417,405" role="text" data-qa="portfolio-summary-overview__portfolio-value"><span class="_nk-text_1a26s_12 nk-text _nk-amount__prefix_16djj_46 _nk-text--no-line-height_1a26s_89 _nk-text--no-color_1a26s_172 _nk-text--style-text-1_1a26s_60 _nk-text--fw-medium_1a26s_133 _nk-text--tag-span_1a26s_103 _nk-text--size-xl_1a26s_109">£</span><span class="_nk-text_1a26s_12 nk-text _nk-text--no-line-height_1a26s_89 _nk-text--no-color_1a26s_172 _nk-text--style-text-1_1a26s_60 _nk-text--fw-medium_1a26s_133 _nk-text--tag-span_1a26s_103 _nk-text--size-xxl_1a26s_106" style="font-family: &quot;ivypresto-headline&quot;, sans-serif;">417,405</span></span>
-	balance, err := page.Locator("[data-qa=portfolio-summary-overview__portfolio-value]").TextContent()
+	balance, err := page.Locator("[data-qa=portfolio-summary-overview__portfolio-value]").Or(page.Locator("[data-qa=combined-dashboard-summary__portfolio-value]")).TextContent()
 	if err != nil {
 		panic(fmt.Sprintf("failed to get balance: %v", err))
 	}

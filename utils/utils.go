@@ -48,14 +48,17 @@ func Finish(page playwright.Page) {
 	r := recover()
 	if r != nil {
 		log.Println("Failure:", r)
-		path, err := page.Video().Path()
-		if err == nil {
-			log.Printf("Final screen video saved at %s\n", path)
-		} else {
-			log.Printf("Failed to save final video: %v\n", err)
-		}
-	} else {
-		page.Video().Delete()
+		/*
+					path, err := page.Video().Path()
+					if err == nil {
+						log.Printf("Final screen video saved at %s\n", path)
+					} else {
+						log.Printf("Failed to save final video: %v\n", err)
+					}
+
+			} else {
+				page.Video().Delete()
+		*/
 	}
 
 	if camoufoxPid > 0 {
@@ -189,10 +192,18 @@ func StartCamoufox(headless bool) playwright.Page {
 	if headless {
 		headlessString = "True"
 	}
-	cmd := exec.Command("python", "-c", "from camoufox.server import launch_server;launch_server(headless="+headlessString+",ws_path='/',port=8000)")
+
+	listener, err := net.Listen("tcp", ":0")
+	if err != nil {
+		panic(err)
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+	log.Printf("Using port: %d\n", port)
+
+	cmd := exec.Command("python", "-c", "from camoufox.server import launch_server;launch_server(headless="+headlessString+",ws_path='/',port="+strconv.Itoa(port)+")")
 	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
-	err := cmd.Start()
+	err = cmd.Start()
 	if err != nil {
 		panic(fmt.Sprintf("could not start camoufox: %v", err))
 	}
@@ -208,7 +219,7 @@ func StartCamoufox(headless bool) playwright.Page {
 
 	// wait until can connect
 	for i := 0; i < 20; i++ {
-		ln, err := net.Dial("tcp", "localhost:8000")
+		ln, err := net.Dial("tcp", "localhost:"+strconv.Itoa(port))
 		if err == nil {
 			ln.Close()
 			break
@@ -218,7 +229,7 @@ func StartCamoufox(headless bool) playwright.Page {
 
 	camoufoxPid = cmd.Process.Pid
 
-	browser, err := pw.Firefox.Connect("ws://localhost:8000/")
+	browser, err := pw.Firefox.Connect("ws://localhost:" + strconv.Itoa(port) + "/")
 	if err != nil {
 		panic(fmt.Sprintf("could not connect to Camoufox: %v", err))
 	}
