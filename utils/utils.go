@@ -164,8 +164,19 @@ func installCamoufoxOld() {
 // pw.Firefox.Connect("ws://localhost:8000/")
 
 func installCamoufox() {
-	cmd := exec.Command("pip", "install", "-U", "camoufox", "--break-system-packages")
-	err := cmd.Run()
+
+	// check if already active
+	cmd := exec.Command("camoufox", "active")
+	output, err := cmd.Output()
+	if err == nil {
+		if strings.HasPrefix(string(output), "official/stable/"+camoufoxVer) {
+			log.Printf("Camoufox installed")
+			return
+		}
+	}
+
+	cmd = exec.Command("pip", "install", "-U", "camoufox", "--break-system-packages")
+	err = cmd.Run()
 	if err != nil {
 		panic(fmt.Sprintf("could not install camoufox: %v", err))
 	}
@@ -177,6 +188,8 @@ func installCamoufox() {
 	}
 
 	cmd = exec.Command("camoufox", "fetch")
+	cmd.Stdout = os.Stderr
+	cmd.Stderr = os.Stderr
 	err = cmd.Run()
 	if err != nil {
 		panic(fmt.Sprintf("could not fetch camoufox: %v", err))
@@ -233,7 +246,7 @@ func StartCamoufox(headless bool) playwright.Page {
 	if err != nil {
 		panic(fmt.Sprintf("could not connect to Camoufox: %v", err))
 	}
-	page, err := browser.NewPage(playwright.BrowserNewPageOptions{UserAgent: playwright.String(userAgent)})
+	page, err := browser.NewPage()
 	if err != nil {
 		panic(fmt.Sprintf("could not create page: %v", err))
 	}
