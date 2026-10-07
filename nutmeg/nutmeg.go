@@ -63,14 +63,13 @@ func main() {
 	page.GetByText("Cookies settings", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click()
 	page.GetByText("Confirm my choices", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).Click()
 
-	log.Printf("Logging in\n")
 	// <input class="input c4ea79246 c882875d6" inputmode="email" name="username" id="username" type="text" aria-label="Email address" value="" required="" autocomplete="off" autocapitalize="none" spellcheck="false" autofocus="">
-	err = page.Locator("#username").Fill(options.Username)
+	err = page.Locator("#username").Filter(playwright.LocatorFilterOptions{Visible: playwright.Bool(true)}).Fill(options.Username)
 	if err != nil {
 		panic(fmt.Sprintf("could not get username: %v", err))
 	}
 	// <input class="input c4ea79246 c2946f7ad" name="password" id="password" type="password" aria-label="Password" required="" autocomplete="current-password" autocapitalize="none" spellcheck="false">
-	err = page.Locator("#password").Fill(options.Password)
+	err = page.Locator("#password").Filter(playwright.LocatorFilterOptions{Visible: playwright.Bool(true)}).Fill(options.Password)
 	if err != nil {
 		panic(fmt.Sprintf("could not get password: %v", err))
 	}

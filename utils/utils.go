@@ -15,25 +15,17 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"path"
 	"regexp"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
-	"github.com/artdarek/go-unzip"
-	"github.com/cavaliergopher/grab/v3"
 	"github.com/mxschmitt/playwright-go"
 )
 
-// const camoufoxVer = "132.0.2-beta.17"
-// const camoufoxVer = "135.0.1-beta.24"
-// const camoufoxVer = "152.0.4-beta.29"
-const camoufoxVer = "156.0.1-beta.34"
-const launchVer = "v0.0.1-alpha"
+const camoufoxVer = "official/stable/156.0.1-beta.34"
 
 const userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:150.0) Gecko/20100101 Firefox/150.0"
 
@@ -66,122 +58,30 @@ func Finish(page playwright.Page) {
 	}
 }
 
-// return the directory where browsers are installed
-//
-// same algorithm as playwright
-func registryDirectory() string {
-
-	if envPath := os.Getenv("PLAYWRIGHT_BROWSERS_PATH"); envPath != "" {
-		return envPath
-	}
-
-	if runtime.GOOS == "linux" {
-		if envPath := os.Getenv("XDG_CACHE_HOME"); envPath != "" {
-			return path.Join(envPath, "ms-playwright")
-		} else {
-			return path.Join(os.Getenv("HOME"), ".cache", "ms-playwright")
-		}
-	} else if runtime.GOOS == "darwin" {
-		return path.Join(os.Getenv("HOME"), "Library", "Caches", "ms-playwright")
-	} else if runtime.GOOS == "windows" {
-		if envPath := os.Getenv("LOCALAPPDATA"); envPath != "" {
-			return path.Join(envPath, "ms-playwright")
-		} else {
-			return path.Join(os.Getenv("HOME"), "AppData", "Local")
-		}
-	} else {
-		panic(fmt.Sprintf("unsupported operating system: %s", runtime.GOOS))
-	}
-}
-
-// install Camoufox if not already installed
-func installCamoufoxOld() {
-
-	browserDirectory := path.Join(registryDirectory(), "camoufox-"+camoufoxVer)
-
-	_, err := os.Stat(browserDirectory)
-	if os.IsNotExist(err) {
-
-		err := os.MkdirAll(browserDirectory, 0750)
-		if err != nil {
-			panic(fmt.Sprintf("could not create directory: %v", err))
-		}
-
-		var camoufoxZipFilename string
-		if runtime.GOOS == "darwin" {
-			camoufoxZipFilename = "camoufox-" + camoufoxVer + "-mac." + runtime.GOARCH + ".zip"
-		} else {
-			camoufoxZipFilename = "camoufox-" + camoufoxVer + "-lin." + runtime.GOARCH + ".zip"
-		}
-		launchZipFilename := "launch-" + runtime.GOOS + "-" + runtime.GOARCH + "-" + launchVer + ".zip"
-
-		// darwin / arm64 - https://github.com/daijro/camoufox/releases/download/v132.0-beta.15/camoufox-132.0-beta.15-mac.arm64.zip
-		// linux / arm64 - https://github.com/daijro/camoufox/releases/download/v132.0-beta.15/camoufox-132.0-beta.15-lin.arm64.zip
-		//
-		// https://github.com/plord12/webscrapers/releases/download/v0.0.1-alpha/launch-darwin-arm64-v0.0.1-alpha.zip
-		//
-		url := "https://github.com/daijro/camoufox/releases/download/v" + camoufoxVer + "/" + camoufoxZipFilename
-		log.Println("Installing camoufox from " + url)
-		log.Println("Into " + browserDirectory)
-		_, err = grab.Get(browserDirectory, url)
-		if err != nil {
-			panic(fmt.Sprintf("could not download camoufox: %v", err))
-		}
-		uz := unzip.New(path.Join(browserDirectory, camoufoxZipFilename), browserDirectory)
-		err = uz.Extract()
-		if err != nil {
-			panic(fmt.Sprintf("could not unzip camoufox: %v", err))
-		}
-		os.Remove(path.Join(browserDirectory, camoufoxZipFilename))
-
-		url = "https://github.com/plord12/webscrapers/releases/download/" + launchVer + "/" + launchZipFilename
-		log.Println("Installing launch from " + url)
-		log.Println("Into " + browserDirectory)
-		_, err = grab.Get(browserDirectory, url)
-		if err != nil {
-			panic(fmt.Sprintf("could not download launch: %v", err))
-		}
-		uz = unzip.New(path.Join(browserDirectory, launchZipFilename), browserDirectory)
-		err = uz.Extract()
-		if err != nil {
-			panic(fmt.Sprintf("could not unzip launch: %v", err))
-		}
-		os.Chmod(path.Join(browserDirectory, launchZipFilename), 0755)
-		os.Remove(path.Join(browserDirectory, launchZipFilename))
-	}
-}
-
-// ALTERNATE WAY
-
-// see github.com/mxschmitt/playwright-go/issues/512#issuecomment-2526211418
-// https://camoufox.com/python/remote-server/
-// pip install -U camoufox --break-system-packages
-// camoufox set official/stable/152.0.4-beta.29
-// camoufox fetch
-// camoufox server
-// or
-// python -c "from camoufox.server import launch_server;launch_server(headless=True,ws_path='/',port=8000)"
-// pw.Firefox.Connect("ws://localhost:8000/")
-
+// install canoufox
 func installCamoufox() {
 
 	// check if already active
 	cmd := exec.Command("camoufox", "active")
 	output, err := cmd.Output()
 	if err == nil {
-		if strings.HasPrefix(string(output), "official/stable/"+camoufoxVer) {
+		if strings.HasPrefix(string(output), camoufoxVer) {
 			log.Printf("Camoufox installed")
 			return
 		}
 	}
 
 	cmd = exec.Command("pip", "install", "-U", "camoufox", "--break-system-packages")
+	cmd.Stdout = os.Stderr
+	cmd.Stderr = os.Stderr
 	err = cmd.Run()
 	if err != nil {
 		panic(fmt.Sprintf("could not install camoufox: %v", err))
 	}
 
-	cmd = exec.Command("camoufox", "set", "official/stable/"+camoufoxVer)
+	cmd = exec.Command("camoufox", "set", camoufoxVer)
+	cmd.Stdout = os.Stderr
+	cmd.Stderr = os.Stderr
 	err = cmd.Run()
 	if err != nil {
 		panic(fmt.Sprintf("could not set camoufox version: %v", err))
@@ -197,6 +97,7 @@ func installCamoufox() {
 
 }
 
+// start camoufox
 func StartCamoufox(headless bool) playwright.Page {
 
 	installCamoufox()
@@ -247,34 +148,6 @@ func StartCamoufox(headless bool) playwright.Page {
 		panic(fmt.Sprintf("could not connect to Camoufox: %v", err))
 	}
 	page, err := browser.NewPage()
-	if err != nil {
-		panic(fmt.Sprintf("could not create page: %v", err))
-	}
-
-	return page
-}
-
-// Start webscraping with Camoufo
-//
-
-func StartCamoufoxOld(headless bool) playwright.Page {
-
-	installCamoufox()
-
-	err := playwright.Install(&playwright.RunOptions{SkipInstallBrowsers: true})
-	if err != nil {
-		panic(fmt.Sprintf("could not install playwright: %v", err))
-	}
-	pw, err := playwright.Run()
-	if err != nil {
-		panic(fmt.Sprintf("could not launch playwright: %v", err))
-	}
-
-	browser, err := pw.Firefox.Launch(playwright.BrowserTypeLaunchOptions{Headless: playwright.Bool(headless), ExecutablePath: playwright.String(path.Join(registryDirectory(), "camoufox-"+camoufoxVer, "launch"))})
-	if err != nil {
-		panic(fmt.Sprintf("could not launch Camoufox: %v", err))
-	}
-	page, err := browser.NewPage(playwright.BrowserNewPageOptions{UserAgent: playwright.String(userAgent)})
 	if err != nil {
 		panic(fmt.Sprintf("could not create page: %v", err))
 	}
