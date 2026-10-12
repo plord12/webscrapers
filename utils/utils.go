@@ -25,7 +25,7 @@ import (
 	"github.com/mxschmitt/playwright-go"
 )
 
-const camoufoxVer = "official/stable/156.0.1-beta.34"
+const camoufoxVer = "official/stable/156.0.1-beta.36"
 
 const userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:150.0) Gecko/20100101 Firefox/150.0"
 

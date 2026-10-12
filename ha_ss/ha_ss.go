@@ -187,10 +187,15 @@ func isBlankImage(image image.Image) bool {
 	zeroCount := 0
 
 	for _, x := range histogram {
-		if x[0] == 0 && x[1] == 0 && x[2] == 0 && x[3] == 0 {
-			zeroCount++
+		//log.Printf("hist %d %d %d %d\n", x[0], x[1], x[2], x[3])
+		for i := 0; i < 4; i++ {
+			if x[i] == 0 {
+				zeroCount++
+			}
 		}
 	}
 
-	return zeroCount > 10
+	//log.Printf("zeroCount %d\n", zeroCount)
+
+	return zeroCount > 30
 }
